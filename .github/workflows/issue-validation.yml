@@ -1,0 +1,32 @@
+name: Issue Validation
+on:
+  issues:
+    types: [opened, edited, reopened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  issue-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = (context.payload.issue.body || '').replace(/<!--[\s\S]*?-->/g, '');
+            const missing = ['작업 목적', '작업 내용', '완료 기준'].filter(heading => {
+              const part = body.split(/^#{2,3}\s+/m).slice(1).find(s => s.split('\n')[0].trim() === heading);
+              const text = part ? part.slice(part.indexOf('\n') + 1).trim() : '';
+              return !/[\p{L}\p{N}]/u.test(text) || /^(TODO|TBD|미작성|작성 예정|_No response_)$/i.test(text);
+            });
+            const marker = '<!-- issue-body-validation -->';
+            const args = {...context.repo, issue_number: context.issue.number};
+            const comments = await github.paginate(github.rest.issues.listComments, args);
+            const prior = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+            if (missing.length) {
+              const message = `${marker}\n필수 항목을 작성해주세요: ${missing.join(', ')}.\n본문 수정 시 자동으로 다시 확인합니다.`;
+              if (prior) await github.rest.issues.updateComment({...context.repo, comment_id: prior.id, body: message});
+              else await github.rest.issues.createComment({...args, body: message});
+              core.setFailed('이슈 본문 필수 항목 누락');
+            } else if (prior) {
+              await github.rest.issues.deleteComment({...context.repo, comment_id: prior.id});
+            }
