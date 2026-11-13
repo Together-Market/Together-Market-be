@@ -1,0 +1,204 @@
+{
+  "status": "DRAFT_REFERENCE_NOT_DATABASE_SEED",
+  "categories": [
+    {
+      "id": 1,
+      "parent_id": null,
+      "name": "기념일·이벤트",
+      "display_order": 1,
+      "active": true
+    },
+    {
+      "id": 11,
+      "parent_id": 1,
+      "name": "생일",
+      "display_order": 1,
+      "active": true
+    },
+    {
+      "id": 12,
+      "parent_id": 1,
+      "name": "연인·부부 기념일",
+      "display_order": 2,
+      "active": true
+    },
+    {
+      "id": 13,
+      "parent_id": 1,
+      "name": "합격·취업·승진",
+      "display_order": 3,
+      "active": true
+    },
+    {
+      "id": 14,
+      "parent_id": 1,
+      "name": "감사·답례",
+      "display_order": 4,
+      "active": true
+    },
+    {
+      "id": 15,
+      "parent_id": 1,
+      "name": "졸업·입학",
+      "display_order": 5,
+      "active": true
+    },
+    {
+      "id": 16,
+      "parent_id": 1,
+      "name": "명절·시즌이벤트",
+      "display_order": 6,
+      "active": true
+    },
+    {
+      "id": 17,
+      "parent_id": 1,
+      "name": "출산·돌",
+      "display_order": 7,
+      "active": true
+    },
+    {
+      "id": 18,
+      "parent_id": 1,
+      "name": "개업·이전",
+      "display_order": 8,
+      "active": true
+    },
+    {
+      "id": 2,
+      "parent_id": null,
+      "name": "모임·행사",
+      "display_order": 2,
+      "active": true
+    },
+    {
+      "id": 21,
+      "parent_id": 2,
+      "name": "집들이",
+      "display_order": 1,
+      "active": true
+    },
+    {
+      "id": 22,
+      "parent_id": 2,
+      "name": "생일파티",
+      "display_order": 2,
+      "active": true
+    },
+    {
+      "id": 23,
+      "parent_id": 2,
+      "name": "홈파티",
+      "display_order": 3,
+      "active": true
+    },
+    {
+      "id": 24,
+      "parent_id": 2,
+      "name": "가족모임",
+      "display_order": 4,
+      "active": true
+    },
+    {
+      "id": 25,
+      "parent_id": 2,
+      "name": "친구모임",
+      "display_order": 5,
+      "active": true
+    },
+    {
+      "id": 26,
+      "parent_id": 2,
+      "name": "직장·단체 행사",
+      "display_order": 6,
+      "active": true
+    },
+    {
+      "id": 27,
+      "parent_id": 2,
+      "name": "스터디·동아리 모임",
+      "display_order": 7,
+      "active": true
+    },
+    {
+      "id": 28,
+      "parent_id": 2,
+      "name": "손님맞이·다과",
+      "display_order": 8,
+      "active": true
+    },
+    {
+      "id": 3,
+      "parent_id": null,
+      "name": "일상·취미",
+      "display_order": 3,
+      "active": true
+    },
+    {
+      "id": 31,
+      "parent_id": 3,
+      "name": "피크닉·나들이",
+      "display_order": 1,
+      "active": true
+    },
+    {
+      "id": 32,
+      "parent_id": 3,
+      "name": "반려동물 생활",
+      "display_order": 2,
+      "active": true
+    },
+    {
+      "id": 33,
+      "parent_id": 3,
+      "name": "캠핑·야외활동",
+      "display_order": 3,
+      "active": true
+    },
+    {
+      "id": 34,
+      "parent_id": 3,
+      "name": "휴식·셀프케어",
+      "display_order": 4,
+      "active": true
+    },
+    {
+      "id": 35,
+      "parent_id": 3,
+      "name": "공예·DIY",
+      "display_order": 5,
+      "active": true
+    },
+    {
+      "id": 36,
+      "parent_id": 3,
+      "name": "독서·문구",
+      "display_order": 6,
+      "active": true
+    }
+  ],
+  "category_preference_labels": {
+    "11": "생일을 맞은 분의 취미나 관심사는 무엇인가요?",
+    "12": "기념일에 함께 즐기거나 선물하고 싶은 것은 무엇인가요?",
+    "13": "축하받는 분이 평소 좋아하거나 필요로 하는 것은 무엇인가요?",
+    "14": "어떤 일에 대한 감사이며 어떤 선물을 원하시나요?",
+    "15": "입학이나 졸업 후 새 생활에 필요한 것은 무엇인가요?",
+    "16": "어떤 명절이나 시즌을 위해 어떤 상품을 찾으시나요?",
+    "17": "출산이나 돌을 맞은 가족에게 어떤 상품을 전하고 싶으신가요?",
+    "18": "새로운 공간에 놓거나 함께 나누고 싶은 상품은 무엇인가요?",
+    "21": "집들이에서 함께 즐기거나 새집에 필요한 것은 무엇인가요?",
+    "22": "생일파티의 분위기와 준비하고 싶은 상품은 무엇인가요?",
+    "23": "홈파티에서 즐기고 싶은 음식이나 소품은 무엇인가요?",
+    "24": "가족모임에서 함께 나누거나 사용할 상품은 무엇인가요?",
+    "25": "친구들과 어떤 활동을 하며 어떤 상품을 원하시나요?",
+    "26": "단체 행사의 목적과 함께 사용할 상품은 무엇인가요?",
+    "27": "모임 활동에 필요한 준비물이나 간식은 무엇인가요?",
+    "28": "손님에게 대접하고 싶은 다과나 준비할 상품은 무엇인가요?",
+    "31": "나들이 장소와 함께 즐기고 싶은 상품은 무엇인가요?",
+    "32": "반려동물을 위해 찾는 상품 종류와 사용 목적은 무엇인가요?",
+    "33": "야외활동에서 필요한 준비물이나 즐길 상품은 무엇인가요?",
+    "34": "쉬는 시간에 즐기거나 사용하고 싶은 상품은 무엇인가요?",
+    "35": "만들고 싶은 작품이나 필요한 재료는 무엇인가요?",
+    "36": "독서나 기록에 필요한 문구와 소품은 무엇인가요?"
+  }
+}

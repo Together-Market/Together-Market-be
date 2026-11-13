@@ -19,6 +19,12 @@ MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 
 
 기본 context 테스트는 DB 없이 부팅을 확인합니다. 공통 검증 단위 테스트와 MYSQL_TEST_URL 설정 시 실행되는 MySQL 스키마 통합 테스트를 추가했습니다. 실행 방법과 담당별 남은 작업은 docs/backend-foundation.md를 참고하세요. 재고는 전 상품 점주 확인형이며 수량 차감·임시 확보는 구현하지 않습니다.
 
+## BE3 추천 내부 로직
+
+구매조건·소유권 검증, 서로 다른 두 점포의 후보 생성·재검증, 추천 평가·순위화와 비동기 상태 처리 로직을 포함합니다. [구매조건](docs/be3-purchase-preparation.md), [후보 생성·조회](docs/be3-candidate-preparation.md), [비동기 처리](docs/be3-async-recommendation.md) 문서에 구현 범위와 연결 계약을 정리했습니다.
+
+현재 모듈은 자동 Bean 등록이나 공개 HTTP API를 추가하지 않습니다. 기존 공통 Entity·Repository·Flyway를 변경하지 않으며, DB 어댑터·세션 인증·공통 응답과의 연결은 후속 작업입니다. 외부 AI 호출은 명시적으로 평가기를 생성할 때만 사용합니다. API 키나 학습 완료 가중치는 포함하지 않습니다. 수동 기본 점수와 학습 가중치 모드를 구분하고, 실험용·버전 불일치 모델은 로더가 거부합니다.
+
 ## 협업
 
 - dev: 기본 브랜치 및 작업 PR 대상, main: 배포 기준
