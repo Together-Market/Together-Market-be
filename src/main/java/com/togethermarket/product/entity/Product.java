@@ -55,6 +55,23 @@ public class Product {
     this.saleStatus = saleStatus;
   }
 
+  public void updateDetails(
+      String name,
+      String description,
+      String imageUrl,
+      BigDecimal priceAmount,
+      Integer preparationMinutes) {
+    this.name = name;
+    this.description = description;
+    this.imageUrl = imageUrl;
+    this.priceAmount = priceAmount;
+    this.preparationMinutes = preparationMinutes;
+  }
+
+  public void changeSaleStatus(SaleStatus status) {
+    this.saleStatus = java.util.Objects.requireNonNull(status);
+  }
+
   public Long getId() {
     return id;
   }

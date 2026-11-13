@@ -16,6 +16,9 @@ class TogetherMarketApplicationTests {
   @MockitoBean UserRepository users;
   @MockitoBean StoreHourRepository hours;
 
+  @MockitoBean com.togethermarket.product.repository.ProductPurposeTagRepository tags;
+  @MockitoBean com.togethermarket.recommendation.repository.PurposeCategoryRepository categories;
+
   @Test
   void contextLoads() {}
 }
