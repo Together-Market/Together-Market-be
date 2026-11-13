@@ -51,6 +51,21 @@ public class Store {
     this.phone = phone;
   }
 
+  public void updateDetails(
+      String name,
+      String businessType,
+      String address,
+      BigDecimal latitude,
+      BigDecimal longitude,
+      String phone) {
+    this.name = name;
+    this.businessType = businessType;
+    this.address = address;
+    this.latitude = latitude;
+    this.longitude = longitude;
+    this.phone = phone;
+  }
+
   public Long getId() {
     return id;
   }
