@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes = OwnerStoreController.class)
+@RestControllerAdvice(
+    assignableTypes = {OwnerStoreController.class, OwnerStoreHoursController.class})
 public class OwnerStoreExceptionHandler {
   public record ErrorResponse(
       String code, String message, List<OwnerStoreException.FieldError> errors) {}
