@@ -29,4 +29,18 @@ public class ApiExceptionHandler {
     return ResponseEntity.badRequest()
         .body(ApiError.of("VALIDATION_ERROR", "JSON 객체 형식으로 입력해 주세요."));
   }
+
+  @ExceptionHandler(
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+  ResponseEntity<ApiError> invalidType(
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException e) {
+    return ResponseEntity.badRequest()
+        .body(ApiError.of("VALIDATION_ERROR", "요청 경로와 조회 조건의 형식을 확인해 주세요."));
+  }
+
+  @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+  ResponseEntity<ApiError> locked(org.springframework.dao.PessimisticLockingFailureException e) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiError.of("REQUEST_IN_PROGRESS", "다른 요청을 처리 중입니다. 같은 키로 다시 시도해 주세요."));
+  }
 }

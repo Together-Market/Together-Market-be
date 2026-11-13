@@ -126,4 +126,11 @@ public class Reservation {
   public LocalDateTime getCreatedAt() {
     return createdAt;
   }
+
+  public boolean expireIfDue(LocalDateTime now) {
+    if (status != ReservationStatus.PENDING || now.isBefore(approvalDeadlineAt)) return false;
+    status = ReservationStatus.FAILED;
+    failureCode = "APPROVAL_EXPIRED";
+    return true;
+  }
 }
