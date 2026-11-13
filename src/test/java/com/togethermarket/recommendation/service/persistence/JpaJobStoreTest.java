@@ -22,7 +22,13 @@ class JpaJobStoreTest {
   final RecommendationItemRepository items = mock(RecommendationItemRepository.class);
   final Clock clock = mock(Clock.class);
   final JpaRecommendationJobStore store =
-      new JpaRecommendationJobStore(purchases, candidates, items, clock);
+      new JpaRecommendationJobStore(
+          purchases,
+          candidates,
+          items,
+          clock,
+          mock(com.togethermarket.product.repository.ProductRepository.class),
+          mock(com.togethermarket.product.service.ProductAvailabilityService.class));
   final PurchaseRequest row =
       identified(
           new PurchaseRequest(

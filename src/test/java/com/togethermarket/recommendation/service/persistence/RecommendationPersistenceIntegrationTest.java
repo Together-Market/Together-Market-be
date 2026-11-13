@@ -2,15 +2,20 @@ package com.togethermarket.recommendation.service.persistence;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.togethermarket.recommendation.dto.request.CreatePurchaseRequest;
 import com.togethermarket.recommendation.entity.*;
 import com.togethermarket.recommendation.repository.*;
 import com.togethermarket.recommendation.service.HybridRecommendationService.RankedCandidate;
 import com.togethermarket.recommendation.service.RecommendationInput;
 import com.togethermarket.recommendation.service.job.*;
+import com.togethermarket.recommendation.service.purchase.*;
+import com.togethermarket.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.sql.Statement;
 import java.time.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -25,6 +30,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Requires a dedicated disposable MySQL database; never set MYSQL_TEST_URL to a service database.
@@ -41,6 +48,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 @Import(RecommendationPersistenceIntegrationTest.Configuration.class)
 class RecommendationPersistenceIntegrationTest {
   static final Instant START = Instant.parse("2026-11-13T09:00:00Z");
+
+  static class DispatchProbe {
+    final List<Long> requests = new ArrayList<>();
+  }
 
   static class TestClock extends Clock {
     final AtomicReference<Instant> value = new AtomicReference<>(START);
@@ -64,6 +75,39 @@ class RecommendationPersistenceIntegrationTest {
   @TestConfiguration(proxyBeanMethods = false)
   static class Configuration {
     @Bean
+    DispatchProbe dispatchProbe() {
+      return new DispatchProbe();
+    }
+
+    @Bean
+    JpaPurchaseCreationService creationService(
+        PurchaseRequestRepository purchases,
+        UserRepository users,
+        PurposeCategoryRepository categories,
+        TestClock clock,
+        JpaRecommendationJobStore store,
+        DispatchProbe probe) {
+      var validator =
+          new PurchaseConditionValidator(
+              new PurposeQuestionService(
+                  new PurposeCategoryService(new JpaPurposeCategorySource(categories)),
+                  Map.of(11L, "선호 상품 종류")),
+              clock);
+      var hook =
+          new RecommendationAfterCommit(
+              id -> {
+                probe.requests.add(id);
+                var lease =
+                    store
+                        .claim(id, UUID.randomUUID(), clock.instant(), Duration.ofSeconds(40))
+                        .orElseThrow();
+                store.complete(lease, List.of(), clock.instant());
+              });
+      return new JpaPurchaseCreationService(
+          purchases, users, validator, new PurchaseAnswerCodec(), hook);
+    }
+
+    @Bean
     TestClock clock() {
       return new TestClock();
     }
@@ -73,8 +117,10 @@ class RecommendationPersistenceIntegrationTest {
         PurchaseRequestRepository p,
         RecommendationCandidateRepository c,
         RecommendationItemRepository i,
+        com.togethermarket.product.repository.ProductRepository products,
+        com.togethermarket.product.service.ProductAvailabilityService availability,
         TestClock clock) {
-      return new JpaRecommendationJobStore(p, c, i, clock);
+      return new JpaRecommendationJobStore(p, c, i, clock, products, availability);
     }
   }
 
@@ -84,11 +130,15 @@ class RecommendationPersistenceIntegrationTest {
   @Autowired RecommendationItemRepository items;
   @Autowired JpaRecommendationJobStore store;
   @Autowired TestClock clock;
+  @Autowired JpaPurchaseCreationService creationService;
+  @Autowired DispatchProbe dispatchProbe;
+  @Autowired PlatformTransactionManager transactions;
   long customer, shopA, shopB, productA, productB, request;
 
   @BeforeEach
   void seed() {
     clock.value.set(START);
+    dispatchProbe.requests.clear();
     customer =
         insert(
             "INSERT INTO users(email,password_hash,name,role) VALUES (?, 'test', 'test', 'CUSTOMER')",
@@ -109,6 +159,14 @@ class RecommendationPersistenceIntegrationTest {
         insert(
             "INSERT INTO products(store_id,name,description,price_amount,preparation_minutes,sale_status) VALUES (?, 'b', 'gift', 4000, 0, 'ON_SALE')",
             shopB);
+    for (long shop : List.of(shopA, shopB)) {
+      for (String type : List.of("BUSINESS", "PICKUP")) {
+        jdbc.update(
+            "INSERT INTO store_hours(store_id,target_date,hour_type,is_closed,opens_at,closes_at,end_day_offset) VALUES (?, '2026-11-14', ?, false, '00:00:00', '23:59:59', 0)",
+            shop,
+            type);
+      }
+    }
     request =
         purchases
             .saveAndFlush(
@@ -146,6 +204,7 @@ class RecommendationPersistenceIntegrationTest {
       jdbc.update("DELETE FROM purchase_requests WHERE id=?", request);
     }
     jdbc.update("DELETE FROM products WHERE id IN (?,?)", productA, productB);
+    jdbc.update("DELETE FROM store_hours WHERE store_id IN (?,?)", shopA, shopB);
     jdbc.update("DELETE FROM stores WHERE id IN (?,?)", shopA, shopB);
     jdbc.update("DELETE FROM users WHERE id=?", customer);
   }
@@ -220,8 +279,16 @@ class RecommendationPersistenceIntegrationTest {
   @Test
   void failedItemInsertRollsBackCandidateAndStateBeforeSeparateFailureTransition() {
     var lease = claim();
-    assertThatThrownBy(() -> store.complete(lease, List.of(result(Long.MAX_VALUE)), START))
-        .isInstanceOf(RuntimeException.class);
+    jdbc.execute(
+        "CREATE TRIGGER fail_test_recommendation_item BEFORE INSERT ON recommendation_items FOR EACH ROW BEGIN IF NEW.product_id = "
+            + productB
+            + " THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='injected test insert failure'; END IF; END");
+    try {
+      assertThatThrownBy(() -> store.complete(lease, List.of(result(productB)), START))
+          .isInstanceOf(RuntimeException.class);
+    } finally {
+      jdbc.execute("DROP TRIGGER fail_test_recommendation_item");
+    }
     assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
     assertThat(purchases.findById(request).orElseThrow().getStatus())
         .isEqualTo(RecommendationStatus.RECOMMENDING);
@@ -246,5 +313,92 @@ class RecommendationPersistenceIntegrationTest {
     assertThat(purchases.findById(request).orElseThrow().getStatus())
         .isEqualTo(RecommendationStatus.READY);
     assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  @Test
+  void priceChangeWithinBudgetUsesCurrentPriceSnapshot() {
+    var lease = claim();
+    jdbc.update("UPDATE products SET price_amount=6000 WHERE id=?", productB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    var saved = candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request);
+    assertThat(saved).hasSize(1);
+    assertThat(
+            items
+                .findByRecommendationCandidateIdInOrderByIdAsc(List.of(saved.getFirst().getId()))
+                .stream()
+                .filter(i -> i.getProductId().equals(productB))
+                .findFirst()
+                .orElseThrow()
+                .getUnitPriceSnapshot())
+        .isEqualByComparingTo("6000");
+  }
+
+  @Test
+  void newlyOverBudgetCandidateIsRemovedBeforeSaving() {
+    var lease = claim();
+    jdbc.update("UPDATE products SET price_amount=10001 WHERE id=?", productB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+    assertThat(purchases.findById(request).orElseThrow().getStatus())
+        .isEqualTo(RecommendationStatus.READY);
+  }
+
+  @Test
+  void soldOutDuringAiEvaluationIsRemovedBeforeSaving() {
+    var lease = claim();
+    jdbc.update("UPDATE products SET sale_status='SOLD_OUT' WHERE id=?", productB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  @Test
+  void pickupScheduleChangeDuringEvaluationIsRechecked() {
+    var lease = claim();
+    jdbc.update(
+        "UPDATE store_hours SET closes_at='14:00:00' WHERE store_id=? AND hour_type='PICKUP'",
+        shopB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  CreatePurchaseRequest creationInput() {
+    return new CreatePurchaseRequest(
+        "11",
+        10000L,
+        "2026-11-14T06:00:00Z",
+        List.of(
+            new CreatePurchaseRequest.Answer("style", "따뜻함"),
+            new CreatePurchaseRequest.Answer("recipient", "친구"),
+            new CreatePurchaseRequest.Answer("category_preference", "꽃")));
+  }
+
+  @Test
+  void creationCommitsKstJsonThenDispatchesIntoIndependentTransaction() {
+    var response = creationService.create(creationInput(), customer);
+    try {
+      assertThat(response.status()).isEqualTo("RECOMMENDING");
+      assertThat(dispatchProbe.requests).containsExactly(response.id());
+      var saved = purchases.findById(response.id()).orElseThrow();
+      assertThat(saved.getStatus()).isEqualTo(RecommendationStatus.READY);
+      assertThat(saved.getPreferredPickupAt()).isEqualTo(LocalDateTime.of(2026, 11, 14, 15, 0));
+      assertThat(new PurchaseAnswerCodec().decode(saved.getAnswers()).getLast().label())
+          .isEqualTo("선호 상품 종류");
+    } finally {
+      jdbc.update("DELETE FROM purchase_requests WHERE id=?", response.id());
+    }
+  }
+
+  @Test
+  void purchaseRollbackDoesNotDispatchOrLeaveRow() {
+    var id =
+        new TransactionTemplate(transactions)
+            .execute(
+                tx -> {
+                  var response = creationService.create(creationInput(), customer);
+                  tx.setRollbackOnly();
+                  return response.id();
+                });
+    assertThat(purchases.findById(id)).isEmpty();
+    assertThat(dispatchProbe.requests).isEmpty();
   }
 }

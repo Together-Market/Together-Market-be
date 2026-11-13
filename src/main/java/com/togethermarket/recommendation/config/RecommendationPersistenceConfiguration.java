@@ -87,7 +87,10 @@ public class RecommendationPersistenceConfiguration {
       PurchaseRequestRepository purchases,
       RecommendationCandidateRepository candidates,
       RecommendationItemRepository items,
+      ProductRepository products,
+      ProductAvailabilityService availability,
       @Qualifier("recommendationClock") Clock clock) {
-    return new JpaRecommendationJobStore(purchases, candidates, items, clock);
+    return new JpaRecommendationJobStore(
+        purchases, candidates, items, clock, products, availability);
   }
 }

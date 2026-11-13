@@ -1,15 +1,19 @@
 package com.togethermarket.recommendation.service.persistence;
 
+import com.togethermarket.product.entity.Product;
+import com.togethermarket.product.repository.ProductRepository;
+import com.togethermarket.product.service.ProductAvailabilityService;
 import com.togethermarket.recommendation.entity.*;
 import com.togethermarket.recommendation.repository.*;
 import com.togethermarket.recommendation.service.HybridRecommendationService.RankedCandidate;
 import com.togethermarket.recommendation.service.job.*;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -23,16 +27,22 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
   private final RecommendationCandidateRepository candidates;
   private final RecommendationItemRepository items;
   private final Clock clock;
+  private final ProductRepository products;
+  private final ProductAvailabilityService availability;
 
   public JpaRecommendationJobStore(
       PurchaseRequestRepository purchases,
       RecommendationCandidateRepository candidates,
       RecommendationItemRepository items,
-      Clock clock) {
+      Clock clock,
+      ProductRepository products,
+      ProductAvailabilityService availability) {
     this.purchases = purchases;
     this.candidates = candidates;
     this.items = items;
     this.clock = clock;
+    this.products = products;
+    this.availability = availability;
   }
 
   @Override
@@ -63,14 +73,43 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
     validate(row, result);
     if (candidates.existsByPurchaseRequestId(row.getId()))
       throw new IllegalStateException("Recommendation results already exist");
+    // AI may take seconds: refresh database facts in this short persistence transaction.
+    // This is a recommendation snapshot, not a stock hold; BE1 validates again at booking.
+    var productIds = new HashSet<Long>();
+    result.forEach(
+        c -> c.candidate().products().forEach(p -> productIds.add(Long.valueOf(p.id()))));
+    Map<Long, Product> current = new HashMap<>();
+    if (!productIds.isEmpty())
+      products.findAllById(productIds).forEach(p -> current.put(p.getId(), p));
+    if (!current.keySet().equals(productIds))
+      throw new IllegalStateException("Recommendation product disappeared before persistence");
+    var eligible = new HashMap<Long, Boolean>();
+    var checkedAt = clock.instant();
+    var pickupAt = KoreanDateTime.toInstant(row.getPreferredPickupAt());
     int rank = 1;
     for (var selected : result) {
+      var pair = selected.candidate().products();
+      var first = current.get(Long.valueOf(pair.get(0).id()));
+      var second = current.get(Long.valueOf(pair.get(1).id()));
+      var total = first.getPriceAmount().add(second.getPriceAmount());
+      if (first.getStoreId().equals(second.getStoreId())
+          || !first.getStoreId().toString().equals(pair.get(0).store_id())
+          || !second.getStoreId().toString().equals(pair.get(1).store_id())
+          || total.compareTo(row.getBudgetAmount()) > 0
+          || !eligible.computeIfAbsent(
+              first.getId(), id -> availability.check(id, pickupAt, checkedAt).available())
+          || !eligible.computeIfAbsent(
+              second.getId(), id -> availability.check(id, pickupAt, checkedAt).available()))
+        continue;
       var saved =
           candidates.save(new RecommendationCandidate(row.getId(), rank++, selected.reason()));
       for (var p : selected.candidate().products()) {
         items.save(
             new RecommendationItem(
-                saved.getId(), Long.valueOf(p.id()), 1, BigDecimal.valueOf(p.price_amount())));
+                saved.getId(),
+                Long.valueOf(p.id()),
+                1,
+                current.get(Long.valueOf(p.id())).getPriceAmount()));
       }
     }
     items.flush();
