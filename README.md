@@ -10,14 +10,14 @@ MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 
 ./gradlew bootRun
 ```
 
-ERD는 아직 초안이므로 초기 마이그레이션과 도메인 엔티티는 포함하지 않았습니다. 인증 방식도 협의 대기 상태입니다.
+초기 DB 구조와 12개 Entity·Repository를 포함합니다. Flyway가 V1 테이블 생성, V2 구매 목적 분류 등록을 실행합니다. 기존 테이블이 있는 DB에는 바로 적용하지 말고 이력을 먼저 확인하세요. 로그인은 이메일·비밀번호 및 서버 세션·쿠키 방식이며 구현은 BE1 담당입니다.
 
 ```sh
 ./gradlew spotlessApply
 ./gradlew spotlessCheck build
 ```
 
-현재 context 테스트는 DB 자동 설정을 제외한 기본 애플리케이션 부팅만 확인합니다. MySQL 연동·재고 동시성 검증은 향후 통합 테스트가 필요합니다.
+기본 context 테스트는 DB 없이 부팅을 확인합니다. 공통 검증 단위 테스트와 MYSQL_TEST_URL 설정 시 실행되는 MySQL 스키마 통합 테스트를 추가했습니다. 실행 방법과 담당별 남은 작업은 docs/backend-foundation.md를 참고하세요. 재고는 전 상품 점주 확인형이며 수량 차감·임시 확보는 구현하지 않습니다.
 
 ## 협업
 
@@ -33,7 +33,7 @@ ERD는 아직 초안이므로 초기 마이그레이션과 도메인 엔티티�
 - CI 필수 검사: build-test-format, pr-validation
 - 이슈는 필수 입력 폼 사용. 본문 의미의 정확성은 리뷰로 확인합니다.
 - PR 자동 검사는 필수 섹션·내용·이슈 연결·제목 형식을 검사합니다.
-- dev → main 병합 방식, 배포 환경, 로그인 인증 방식은 미정
+- dev → main 병합 방식, 배포 환경은 미정. 세션·CSRF 세부 구현은 BE1 담당
 
 ## 코드 구조
 
@@ -42,6 +42,10 @@ ERD는 아직 초안이므로 초기 마이그레이션과 도메인 엔티티�
 ## API 합의
 
 Notion에서 설계하고 springdoc Swagger UI는 추후 연동합니다.
-/api/v1, 복수 명사·kebab-case URL, camelCase JSON, 성공 {data}, 실패 {code,message,errors}, 적절한 HTTP 상태코드를 사용합니다.
-날짜·시간은 시간대 포함 ISO 8601, 금액은 원 단위 정수, 페이지는 0부터 size 기본 20입니다.
+URL은 /api/v1 접두사 없이 기존 명세의 경로를 사용합니다. JSON 및 쿼리 파라미터는 snake_case, Java 필드는 camelCase를 사용합니다. 성공 {data}, 실패 {code,message,errors} 형식을 따릅니다. DB ID는 BIGINT, Java는 Long, API ID는 문자열입니다. 공통 응답·변환 설정은 BE1 구현에 맞춥니다.
+날짜·시간은 오프셋 포함 ISO 8601, 금액은 원 단위 정수입니다. 외부 API page는 1부터, size 기본값은 20이며 목록은 items/page/size/total_count를 사용합니다. JPA 페이지 번호는 내부에서 page - 1로 변환합니다. DB 시간 저장·변환 기준은 BE1과 확정하며 현재 코드에 전역 시간대는 강제하지 않습니다.
 예약 생성에는 Idempotency-Key를 사용합니다. 상세 정책은 별도 API 명세에서 확정합니다.
+
+구매요청은 202 Accepted, 상태는 RECOMMENDING/READY/FAILED입니다. 후보 없음은 READY와 빈 목록, 시스템 실패는 FAILED와 failure_code로 구분합니다. 구매요청에는 별도 Idempotency-Key를 적용하지 않습니다.
+
+상품 이미지는 image_url로 등록·수정하며 업로드 API는 이번 범위에 없습니다. 상품 삭제·점포 탈퇴는 제외하고 판매 중지는 PAUSED로 처리합니다.
