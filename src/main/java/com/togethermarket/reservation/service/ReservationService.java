@@ -216,8 +216,8 @@ public class ReservationService {
   }
 
   private void expire(Reservation r, LocalDateTime now) {
-    if (r.expireIfDue(now))
-      for (var o : orders.findByReservationIdOrderByIdAsc(r.getId())) o.expireIfPending();
+    if (r.getStatus() == ReservationStatus.PENDING && !now.isBefore(r.getApprovalDeadlineAt()))
+      r.expireIfDue(now, orders.findByReservationIdOrderByIdAsc(r.getId()));
   }
 
   private ReservationResponse response(Reservation r) {

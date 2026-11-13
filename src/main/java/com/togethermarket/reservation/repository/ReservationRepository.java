@@ -25,4 +25,18 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
   Page<Reservation> findByCustomerIdAndStatus(
       Long customerId, ReservationStatus status, Pageable pageable);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select r from Reservation r where r.id=:id")
+  Optional<Reservation> findForUpdate(@Param("id") Long id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select r from Reservation r where r.status=com.togethermarket.reservation.entity.ReservationStatus.PENDING and r.approvalDeadlineAt<=:now and exists (select o.id from StoreOrder o where o.reservationId=r.id and o.storeId=:store) order by r.id")
+  List<Reservation> findExpiredForStoreForUpdate(
+      @Param("store") Long store, @Param("now") LocalDateTime now);
+
+  @Query(
+      "select r.id from Reservation r where r.status=com.togethermarket.reservation.entity.ReservationStatus.PENDING and r.approvalDeadlineAt<=:now order by r.approvalDeadlineAt,r.id")
+  List<Long> findDueIds(@Param("now") LocalDateTime now, Pageable pageable);
 }

@@ -127,4 +127,22 @@ public class StoreOrder {
   public void expireIfPending() {
     if (approvalStatus == ApprovalStatus.PENDING) approvalStatus = ApprovalStatus.EXPIRED;
   }
+
+  public void approve(LocalDateTime now) {
+    requirePending();
+    approvalStatus = ApprovalStatus.APPROVED;
+    respondedAt = now;
+  }
+
+  public void reject(LocalDateTime now, String reason) {
+    requirePending();
+    approvalStatus = ApprovalStatus.REJECTED;
+    respondedAt = now;
+    rejectionReason = reason;
+  }
+
+  private void requirePending() {
+    if (approvalStatus != ApprovalStatus.PENDING)
+      throw new IllegalStateException("Order must be pending");
+  }
 }

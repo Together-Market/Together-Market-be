@@ -34,6 +34,8 @@ class ReservationControllerTest {
   @MockitoBean com.togethermarket.store.repository.StoreHourRepository hours;
   @MockitoBean com.togethermarket.product.repository.ProductPurposeTagRepository tags;
   @MockitoBean com.togethermarket.recommendation.repository.PurposeCategoryRepository categories;
+  @MockitoBean com.togethermarket.reservation.repository.ReservationRepository reservations;
+  @MockitoBean com.togethermarket.reservation.repository.StoreOrderRepository orders;
   @Autowired MockMvc mvc;
   @MockitoBean ReservationService service;
   static final String BODY =

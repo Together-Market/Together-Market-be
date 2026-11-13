@@ -45,6 +45,9 @@ class ReservationDatabaseIntegrationTest {
   }
 
   @Autowired ReservationService service;
+  @Autowired com.togethermarket.reservation.service.OwnerOrderService ownerOrders;
+  @Autowired com.togethermarket.reservation.service.ReservationExpiryWorker expiry;
+
   @Autowired UserRepository users;
   @Autowired StoreRepository stores;
   @Autowired StoreHourRepository hours;
@@ -66,7 +69,10 @@ class ReservationDatabaseIntegrationTest {
         users.saveAndFlush(
             new User(UUID.randomUUID() + "@test.invalid", "hash", "점주", UserRole.OWNER));
     var a = stores.saveAndFlush(new Store(owner.getId(), "꽃", "꽃", "주소A", null, null, "010"));
-    var b = stores.saveAndFlush(new Store(owner.getId(), "케이크", "제과", "주소B", null, null, "010"));
+    var ownerB =
+        users.saveAndFlush(
+            new User(UUID.randomUUID() + "@test.invalid", "hash", "점주B", UserRole.OWNER));
+    var b = stores.saveAndFlush(new Store(ownerB.getId(), "케이크", "제과", "주소B", null, null, "010"));
     var pickup = LocalDateTime.of(2026, 11, 20, 15, 0);
     for (var store : List.of(a, b))
       for (var type : HourType.values())
@@ -217,5 +223,261 @@ class ReservationDatabaseIntegrationTest {
     assertTrue(
         failed.items().getFirst().orders().stream()
             .allMatch(o -> o.approvalStatus().equals("EXPIRED")));
+  }
+
+  record Decisions(
+      Fixture fixture,
+      Long reservation,
+      Long firstOrder,
+      Long secondOrder,
+      Long firstStore,
+      Long secondStore,
+      Long firstOwner,
+      Long secondOwner) {}
+
+  Decisions decisions() {
+    var f = fixture();
+    var created = service.create(f.customer(), UUID.randomUUID().toString(), f.input());
+    Long id = Long.valueOf(created.reservation().id());
+    var list = orders.findByReservationIdOrderByIdAsc(id);
+    var a = list.getFirst();
+    var b = list.getLast();
+    return new Decisions(
+        f,
+        id,
+        a.getId(),
+        b.getId(),
+        a.getStoreId(),
+        b.getStoreId(),
+        stores.findById(a.getStoreId()).orElseThrow().getOwnerId(),
+        stores.findById(b.getStoreId()).orElseThrow().getOwnerId());
+  }
+
+  @Test
+  void concurrentApprovalsFromTwoOwnersConfirmExactlyOnce() throws Exception {
+    var d = decisions();
+    var start = new CountDownLatch(1);
+    try (var pool = Executors.newFixedThreadPool(2)) {
+      var a =
+          pool.submit(
+              () -> {
+                start.await();
+                return ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+              });
+      var b =
+          pool.submit(
+              () -> {
+                start.await();
+                return ownerOrders.approve(d.secondOwner(), d.secondStore(), d.secondOrder());
+              });
+      start.countDown();
+      var ra = a.get(30, TimeUnit.SECONDS);
+      var rb = b.get(30, TimeUnit.SECONDS);
+      assertEquals(
+          Set.of("PENDING", "CONFIRMED"), Set.of(ra.reservationStatus(), rb.reservationStatus()));
+    }
+    assertEquals(
+        com.togethermarket.reservation.entity.ReservationStatus.CONFIRMED,
+        reservations.findById(d.reservation()).orElseThrow().getStatus());
+    assertTrue(
+        orders.findByReservationIdOrderByIdAsc(d.reservation()).stream()
+            .allMatch(
+                o ->
+                    o.getApprovalStatus()
+                        == com.togethermarket.reservation.entity.ApprovalStatus.APPROVED));
+    assertEquals(
+        "CONFIRMED",
+        ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder()).reservationStatus());
+  }
+
+  @Test
+  void concurrentOppositeActionsOnSameOrderHaveOnlyOneWinner() throws Exception {
+    var d = decisions();
+    var start = new CountDownLatch(1);
+    try (var pool = Executors.newFixedThreadPool(2)) {
+      var a =
+          pool.submit(
+              () -> {
+                start.await();
+                try {
+                  ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+                  return "APPROVED";
+                } catch (com.togethermarket.global.api.ApiException e) {
+                  return e.code();
+                }
+              });
+      var b =
+          pool.submit(
+              () -> {
+                start.await();
+                try {
+                  ownerOrders.reject(d.firstOwner(), d.firstStore(), d.firstOrder(), "재고 없음");
+                  return "REJECTED";
+                } catch (com.togethermarket.global.api.ApiException e) {
+                  return e.code();
+                }
+              });
+      start.countDown();
+      var results = List.of(a.get(30, TimeUnit.SECONDS), b.get(30, TimeUnit.SECONDS));
+      assertEquals(
+          1, results.stream().filter(x -> x.equals("APPROVED") || x.equals("REJECTED")).count());
+      var saved = orders.findById(d.firstOrder()).orElseThrow();
+      assertTrue(results.contains(saved.getApprovalStatus().name()));
+    }
+  }
+
+  @Test
+  void lateDecisionCommitsExpiryEvenThoughItReturnsConflict() {
+    var d = decisions();
+    ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+    jdbc.update(
+        "update reservations set approval_deadline_at='2026-11-20 10:00:00' where id=?",
+        d.reservation());
+    assertThrows(
+        com.togethermarket.reservation.service.ReservationExpiredException.class,
+        () -> ownerOrders.approve(d.secondOwner(), d.secondStore(), d.secondOrder()));
+    var saved = reservations.findById(d.reservation()).orElseThrow();
+    assertEquals("APPROVAL_EXPIRED", saved.getFailureCode());
+    assertEquals(com.togethermarket.reservation.entity.ReservationStatus.FAILED, saved.getStatus());
+    assertEquals(
+        com.togethermarket.reservation.entity.ApprovalStatus.APPROVED,
+        orders.findById(d.firstOrder()).orElseThrow().getApprovalStatus());
+    assertEquals(
+        com.togethermarket.reservation.entity.ApprovalStatus.EXPIRED,
+        orders.findById(d.secondOrder()).orElseThrow().getApprovalStatus());
+  }
+
+  @Test
+  void approvalRacingExpiryWorkerCannotConfirmAnExpiredReservation() throws Exception {
+    var d = decisions();
+    ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+    jdbc.update(
+        "update reservations set approval_deadline_at='2026-11-20 10:00:00' where id=?",
+        d.reservation());
+    var start = new CountDownLatch(1);
+    try (var pool = Executors.newFixedThreadPool(2)) {
+      var approval =
+          pool.submit(
+              () -> {
+                start.await();
+                try {
+                  ownerOrders.approve(d.secondOwner(), d.secondStore(), d.secondOrder());
+                  return "UNEXPECTED_APPROVAL";
+                } catch (com.togethermarket.global.api.ApiException e) {
+                  return e.code();
+                }
+              });
+      var timeout =
+          pool.submit(
+              () -> {
+                start.await();
+                return expiry.expire(d.reservation());
+              });
+      start.countDown();
+      assertEquals("RESERVATION_EXPIRED", approval.get(30, TimeUnit.SECONDS));
+      timeout.get(30, TimeUnit.SECONDS);
+    }
+    assertEquals(
+        com.togethermarket.reservation.entity.ReservationStatus.FAILED,
+        reservations.findById(d.reservation()).orElseThrow().getStatus());
+    assertEquals(
+        com.togethermarket.reservation.entity.ApprovalStatus.EXPIRED,
+        orders.findById(d.secondOrder()).orElseThrow().getApprovalStatus());
+  }
+
+  @Test
+  void ownerListHasOnlyOwnStoreAndExpiresBeforeBothFilters() {
+    var d = decisions();
+    assertEquals(
+        "NOT_FOUND",
+        assertThrows(
+                com.togethermarket.global.api.ApiException.class,
+                () -> ownerOrders.detail(d.firstOwner(), d.secondStore(), d.secondOrder()))
+            .code());
+    assertEquals(
+        "NOT_FOUND",
+        assertThrows(
+                com.togethermarket.global.api.ApiException.class,
+                () -> ownerOrders.detail(d.firstOwner(), d.firstStore(), d.secondOrder()))
+            .code());
+    var before =
+        ownerOrders.list(
+            d.firstOwner(),
+            d.firstStore(),
+            1,
+            20,
+            com.togethermarket.reservation.entity.ApprovalStatus.PENDING,
+            com.togethermarket.reservation.entity.ReservationStatus.PENDING);
+    assertEquals(1, before.totalCount());
+    assertEquals(d.firstOrder().toString(), before.items().getFirst().id());
+    assertTrue(before.items().getFirst().canRespond());
+    jdbc.update(
+        "update reservations set approval_deadline_at='2026-11-20 10:00:00' where id=?",
+        d.reservation());
+    assertEquals(
+        0,
+        ownerOrders
+            .list(
+                d.firstOwner(),
+                d.firstStore(),
+                1,
+                20,
+                com.togethermarket.reservation.entity.ApprovalStatus.PENDING,
+                com.togethermarket.reservation.entity.ReservationStatus.PENDING)
+            .totalCount());
+    var after =
+        ownerOrders.list(
+            d.firstOwner(),
+            d.firstStore(),
+            1,
+            20,
+            com.togethermarket.reservation.entity.ApprovalStatus.EXPIRED,
+            com.togethermarket.reservation.entity.ReservationStatus.FAILED);
+    assertEquals(1, after.totalCount());
+    assertFalse(after.items().getFirst().canRespond());
+  }
+
+  @Test
+  void expiryWorkerIsIdempotentAndNeverChangesConfirmedReservations() {
+    var d = decisions();
+    assertFalse(expiry.expire(d.reservation()));
+    ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+    ownerOrders.approve(d.secondOwner(), d.secondStore(), d.secondOrder());
+    jdbc.update(
+        "update reservations set approval_deadline_at='2026-11-20 10:00:00' where id=?",
+        d.reservation());
+    assertFalse(expiry.expire(d.reservation()));
+    assertEquals(
+        com.togethermarket.reservation.entity.ReservationStatus.CONFIRMED,
+        reservations.findById(d.reservation()).orElseThrow().getStatus());
+    var pending = decisions();
+    jdbc.update(
+        "update reservations set approval_deadline_at='2026-11-20 10:00:00' where id=?",
+        pending.reservation());
+    assertTrue(expiry.expire(pending.reservation()));
+    assertFalse(expiry.expire(pending.reservation()));
+  }
+
+  @Test
+  void oneStoreRejectionFailsWholeReservationAndPreservesOtherApproval() {
+    var d = decisions();
+    ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder());
+    var response = ownerOrders.reject(d.secondOwner(), d.secondStore(), d.secondOrder(), "준비 불가");
+    assertEquals("FAILED", response.reservationStatus());
+    assertEquals("STORE_REJECTED", response.failureCode());
+    assertFalse(response.canRespond());
+    assertEquals(
+        "FAILED",
+        ownerOrders.approve(d.firstOwner(), d.firstStore(), d.firstOrder()).reservationStatus());
+    assertEquals(
+        "준비 불가",
+        ownerOrders
+            .reject(d.secondOwner(), d.secondStore(), d.secondOrder(), "준비 불가")
+            .rejectionReason());
+    assertThrows(
+        com.togethermarket.global.api.ApiException.class,
+        () -> ownerOrders.reject(d.secondOwner(), d.secondStore(), d.secondOrder(), "다른 사유"));
+    assertEquals(
+        "STORE_REJECTED", service.detail(d.fixture().customer(), d.reservation()).failureCode());
   }
 }
