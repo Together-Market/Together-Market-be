@@ -40,6 +40,8 @@ import tools.jackson.databind.*;
       "spring.datasource.username=${MYSQL_TEST_USERNAME:root}",
       "spring.datasource.password=${MYSQL_TEST_PASSWORD:}",
       "GEMINI_API_KEY=${LIVE_GEMINI_KEY:test-key}",
+      // This scenario owns its catalog; CSV startup import is tested in a separate database.
+      "demo.catalog.enabled=false",
       "reservation.expiry-scheduler.enabled=false"
     })
 @org.springframework.test.annotation.DirtiesContext(
@@ -290,6 +292,9 @@ class DemoWorkflowDatabaseIntegrationTest {
               item.path("store").path("id").asString(),
               "requested_pickup_at",
               pickup.toString()));
+    assertThat(pickups)
+        .extracting(p -> p.get("store_id"))
+        .containsExactlyInAnyOrder(Long.toString(storeA), Long.toString(storeB));
     String reservationBody =
         mapper.writeValueAsString(
             Map.of(

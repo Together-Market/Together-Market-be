@@ -25,6 +25,8 @@ class Be3EnabledApplicationTest {
   @MockitoBean com.togethermarket.product.repository.ProductPurposeTagRepository tags;
   @MockitoBean com.togethermarket.store.repository.StoreRepository stores;
   @MockitoBean com.togethermarket.store.repository.StoreHourRepository hours;
+  @MockitoBean com.togethermarket.store.repository.PublicStoreRecordRepository publicRecords;
+  @MockitoBean org.springframework.jdbc.core.JdbcTemplate jdbc;
   @MockitoBean com.togethermarket.recommendation.repository.PurposeCategoryRepository categories;
   @MockitoBean com.togethermarket.recommendation.repository.PurchaseRequestRepository purchases;
 
