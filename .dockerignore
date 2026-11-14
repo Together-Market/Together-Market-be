@@ -1,0 +1,7 @@
+# Deny by default: never send the working tree, secrets or DB exports to Docker.
+**
+!Dockerfile
+!.dockerignore
+!build/
+!build/libs/
+!build/libs/together-market-0.0.1-SNAPSHOT.jar

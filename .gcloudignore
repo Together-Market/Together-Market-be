@@ -1,0 +1,9 @@
+# Upload only the tested executable JAR and image build instructions.
+# Do not include .gitignore: it excludes the JAR this packaging workflow needs.
+**
+!Dockerfile
+!.dockerignore
+!.gcloudignore
+!build/
+!build/libs/
+!build/libs/together-market-0.0.1-SNAPSHOT.jar

@@ -93,7 +93,7 @@ class DatabaseSchemaIntegrationTest {
         jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success = 1 AND type = 'SQL'",
                 String.class)
-            .containsAll(java.util.List.of("1", "2", "3", "4")));
+            .containsAll(java.util.List.of("1", "2", "3", "4", "5")));
   }
 
   @Test

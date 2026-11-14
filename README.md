@@ -4,9 +4,15 @@ Java 21 · Spring Boot 4.1.2 · Gradle(Groovy) · MySQL 8.4 · JPA · Flyway
 
 ## 로컬 실행
 
+4단계 [Cloud Run 백그라운드 실행 설정](docs/cloud-run-background.md): 예약 만료·추천 작업을 위해 인스턴스 기반 과금과 서비스 최소 1개를 사용합니다. 콘솔 입력 순서와 배포 후 검증 항목을 정리했으며 실제 클라우드 적용은 아직입니다.
+
 주소 미리보기와 기존 좌표 보완: [API 명세·프런트 전달](docs/kakao-geocoding-api.md), [키 설정·배포 준비](docs/kakao-setup-deployment.md), [데이터 보완 실행](docs/coordinate-backfill.md). 카카오 결과 영구 저장은 공식 이용 조건에 따라 차단하며 공공데이터 좌표를 우선 사용합니다.
 
 백엔드 우선 배포 준비: [점검·보안 검토 결과](docs/predeployment-review.md), [사용자 커밋·푸시·PR 순서](docs/git-release-guide.md). 최종 신규 예약도 현재 좌표로 직선거리 500m 조건을 검사합니다.
+
+Google Cloud 배포 준비 1단계: [Java 21 컨테이너 빌드 안내](docs/cloud-run-container.md). 먼저 Gradle로 검증한 실행 JAR을 만들고 Docker 이미지에 포장합니다. Cloud SQL 연결·DB 세션·백그라운드 작업 설정은 후속 단계입니다.
+
+2단계 [Cloud SQL 연결 준비](docs/cloud-sql-setup.md): `cloudsql` 프로필을 명시할 때만 Google Java Connector를 사용합니다. 해커톤 배포는 `demo,cloudsql`, 기존 로컬 실행은 `demo`를 유지합니다. 실제 Cloud SQL 접속·데이터 복원·세션 저장·배포 검증은 별도입니다.
 
 팀 공유 CSV 점포와 시연 상품 데이터를 설치하려면 [CSV 시연 DB 준비](docs/csv-demo-data.md)를 참고하세요. CSV 원문·상품/가격 스냅샷·입력 스크립트를 포함하며, 새 MySQL DB에서도 동일한 카탈로그를 구성할 수 있습니다.
 
@@ -52,6 +58,8 @@ MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 
 도메인 auth, user, store, product, recommendation, reservation별로 controller/service/repository/entity/dto(request,response)를 구성합니다. 공통 예외·설정은 global에 둡니다. 실제 코드가 생길 때 패키지를 생성합니다.
 
 ## API 합의
+
+배포 세션 저장: [JDBC 세션 적용·확인 안내](docs/jdbc-session-deployment.md). `cloudsql`에서 활성화하며 V5가 세션용 테이블을 추가합니다. 다음 서버 시작 전 백업이 필요합니다. 로컬 메모리 세션은 유지됩니다.
 
 `GET /purpose-categories`는 로그인한 CUSTOMER와 OWNER 모두 조회할 수 있습니다. 응답은 `data.items`의 대분류와 `children`의 중분류이며 ID는 문자열입니다. 상품 등록·수정의 `purpose_category_ids`에는 중분류 ID 문자열 배열을 전달합니다. 맞춤 질문 조회와 구매요청 API는 기존처럼 CUSTOMER 전용입니다.
 
