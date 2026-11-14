@@ -13,6 +13,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           com.togethermarket.product.entity.SaleStatus status,
       @org.springframework.data.repository.query.Param("budget") java.math.BigDecimal budget,
       org.springframework.data.domain.Pageable pageable);
+
   org.springframework.data.domain.Page<Product> findByStoreId(
       Long storeId, org.springframework.data.domain.Pageable pageable);
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface RecommendationItemRepository extends JpaRepository<RecommendationItem, Long> {
   java.util.List<RecommendationItem> findByRecommendationCandidateIdInOrderByIdAsc(
       java.util.Collection<Long> candidateIds);
+
   java.util.List<RecommendationItem> findByRecommendationCandidateIdOrderByProductIdAsc(
       Long candidateId);
 }
