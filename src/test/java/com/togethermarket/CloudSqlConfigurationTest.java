@@ -53,7 +53,8 @@ class CloudSqlConfigurationTest {
                   .containsEntry("socketFactory", "com.google.cloud.sql.mysql.SocketFactory")
                   .containsEntry("cloudSqlInstance", "test-project:asia-northeast3:test-instance")
                   .containsEntry("ipTypes", "PUBLIC")
-                  .containsEntry("cloudSqlRefreshStrategy", "lazy");
+                  .containsEntry("cloudSqlRefreshStrategy", "lazy")
+                  .containsEntry("allowPublicKeyRetrieval", "true");
               assertThat(ds.getMaximumPoolSize()).isEqualTo(5);
               assertThat(ds.getMinimumIdle()).isZero();
               assertThat(ds.getConnectionTimeout()).isEqualTo(10000);

@@ -30,7 +30,7 @@
 
 프런트의 모든 요청은 fetch `credentials: "include"` 또는 Axios `withCredentials: true`를 사용합니다. 로컬 프런트에서 배포 HTTPS 백엔드를 직접 호출할 때는 배포 서버에 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`, `SERVER_SERVLET_SESSION_COOKIE_SAME_SITE=none`을 설정합니다. 로컬 HTTP 백엔드에는 이 배포용 쿠키 설정을 적용하지 않습니다. 브라우저의 서드파티 쿠키 차단은 별도로 검증해야 합니다. 상세 설정·프록시 대안은 [배포 안내](kakao-setup-deployment.md)를 참고합니다.
 
-세션은 서버 메모리에 저장되므로 서버 재시작 시 로그아웃됩니다. HttpOnly와 쿠키 전용 세션 전달을 적용했습니다. 실제 브라우저·배포 DB 확인 전 운영 배포 준비 완료로 간주하지 않습니다.
+로컬 `demo`에서는 세션이 서버 메모리에 저장되어 재시작 시 로그아웃됩니다. 배포용 `demo,cloudsql`에서는 [JDBC 세션 설정](jdbc-session-deployment.md)으로 DB에 저장합니다. HttpOnly와 쿠키 전용 세션 전달을 적용했습니다. 실제 브라우저·배포 DB 확인 전 운영 배포 준비 완료로 간주하지 않습니다.
 
 ## 검증
 

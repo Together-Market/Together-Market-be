@@ -10,6 +10,8 @@
 
 Cloud Run 실행 서비스 계정의 ADC로 Google 연결 권한을 인증하며, MySQL 로그인은 DB_USERNAME/DB_PASSWORD를 사용한다. 자동 IAM DB 로그인 방식은 아니다. 서비스 계정 JSON 키 파일을 발급하거나 이미지에 넣을 필요가 없다. Google Cloud IAM 역할과 MySQL DB 권한은 별개다.
 
+MySQL 8.4의 기본 `caching_sha2_password` 인증을 위해 Cloud SQL 프로필의 Connector/J 속성에 `allowPublicKeyRetrieval=true`를 설정한다. 이는 Cloud SQL Java Connector 경로에서 서버의 인증용 공개키를 받아오는 설정이며 비밀번호 값을 설정 파일에 넣지 않는다. [Cloud SQL 공식 MySQL 8.4 연결 안내](https://docs.cloud.google.com/sql/docs/mysql/connect-auth-proxy).
+
 ## 배포할 때 입력할 이름
 
 | 이름 | 입력 내용 |
@@ -53,8 +55,8 @@ Cloud Run 실행 서비스 계정의 ADC로 Google 연결 권한을 인증하며
 
 1. 원본 로컬 DB를 백업한다. 비밀정보·개인정보가 포함될 수 있는 덤프를 Git에 올리지 않는다.
 2. Cloud SQL의 새 데이터베이스에만 복원한다. 최초 앱 부팅 전에 점포 598개, 상품·태그·일정과 `flyway_schema_history` 보존을 확인한다.
-3. Cloud SQL → 인스턴스 → 사용자(Users)에서 전용 계정을 준비한다. 비밀번호는 본인이 정하고 입력한다.
-4. MySQL 권한은 해당 서비스 스키마에 필요한 범위로 제한한다. 현재 앱 시작 시 Flyway 마이그레이션을 실행하므로 실행 계정이 해당 스키마의 DDL·Flyway 이력 관리도 할 수 있어야 한다. 이후 마이그레이션 전용 계정을 분리하려면 별도 구성이 필요하다.
+3. 복원 완료 후 백엔드 전용 MySQL 계정을 준비한다. MySQL 8.4에서는 Cloud SQL 콘솔의 사용자 생성 기능이 기본 `cloudsqlsuperuser` 역할을 부여할 수 있으므로, 콘솔에서 새 사용자만 만들고 최소 권한이 되었다고 가정하지 않는다. 계정과 비밀번호는 사용자가 직접 관리한다.
+4. MySQL 계정 권한은 SQL에서 서비스 스키마 범위로 명시적으로 제한·확인한다. 현재 앱 시작 시 Flyway 마이그레이션을 실행하므로 초기 실행 계정에는 해당 스키마의 필요한 DDL 및 Flyway 이력 읽기·쓰기 권한도 있어야 한다. 이후 마이그레이션 전용 계정을 분리하려면 별도 구성이 필요하다. [Cloud SQL MySQL 사용자 권한 안내](https://docs.cloud.google.com/sql/docs/mysql/users).
 
 자동 초기화·중복 시딩으로 복원 문제를 해결하지 않는다. `ddl-auto=validate`, `DEMO_CATALOG_ENABLED=false`를 유지한다. Flyway 오류가 나면 원본 이력과 복원 결과부터 확인하고 임의로 baseline/clean을 실행하지 않는다.
 
