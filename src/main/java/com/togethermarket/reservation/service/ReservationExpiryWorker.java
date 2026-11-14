@@ -2,6 +2,7 @@ package com.togethermarket.reservation.service;
 
 import com.togethermarket.reservation.repository.*;
 import java.time.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 
@@ -12,7 +13,9 @@ public class ReservationExpiryWorker {
   private final Clock clock;
 
   public ReservationExpiryWorker(
-      ReservationRepository reservations, StoreOrderRepository orders, Clock clock) {
+      ReservationRepository reservations,
+      StoreOrderRepository orders,
+      @Qualifier("reservationClock") Clock clock) {
     this.reservations = reservations;
     this.orders = orders;
     this.clock = clock;

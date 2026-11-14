@@ -3,6 +3,7 @@ package com.togethermarket.reservation.service;
 import com.togethermarket.reservation.repository.ReservationRepository;
 import java.time.*;
 import org.slf4j.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.TransientDataAccessException;
@@ -26,7 +27,7 @@ public class ReservationExpiryScheduler {
   public ReservationExpiryScheduler(
       ReservationRepository reservations,
       ReservationExpiryWorker worker,
-      Clock clock,
+      @Qualifier("reservationClock") Clock clock,
       @Value("${reservation.expiry-scheduler.batch-size:100}") int batchSize) {
     if (batchSize < 1 || batchSize > 1000)
       throw new IllegalArgumentException("expiry batch size must be 1..1000");

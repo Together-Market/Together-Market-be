@@ -11,6 +11,7 @@ import com.togethermarket.user.repository.UserRepository;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class OwnerOrderService {
       StoreOrderRepository orders,
       StoreRepository stores,
       UserRepository users,
-      Clock clock) {
+      @Qualifier("reservationClock") Clock clock) {
     this.reservations = reservations;
     this.orders = orders;
     this.stores = stores;

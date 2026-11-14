@@ -49,7 +49,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew test --tests '*ReservationDatabaseIntegrationTest' --no-daemon
+      - run: ./gradlew test --no-daemon
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

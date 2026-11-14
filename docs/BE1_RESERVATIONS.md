@@ -67,3 +67,9 @@ RESERVATION_APPROVAL_WINDOW=PT30M ./gradlew bootRun
 실제 MySQL 테스트는 `MYSQL_TEST_URL`, `MYSQL_TEST_USERNAME`, `MYSQL_TEST_PASSWORD` 설정 후 `./gradlew test --tests '*ReservationDatabaseIntegrationTest'`로 실행합니다. **전용 테스트 DB**를 사용해야 합니다. 테스트는 임시 트리거로 두 번째 주문 저장 실패를 유도한 뒤 트리거를 제거합니다.
 
 CI의 reservation-mysql 작업은 별도 MySQL 8.4에서 동시 동일 키 생성, 두 번째 주문 실패 시 전체 롤백과 재시도, 가격 변경 후 스냅샷 유지, 타인 접근 차단, 만료 처리 후 상태 필터를 검사합니다. 로컬에서 DB를 구동하지 못한 경우 이 CI 결과로 별도 확인합니다.
+
+## 파트 통합 보완 (#24)
+
+예약 생성·점주 주문·만료 작업은 `@Qualifier("reservationClock")`으로 시간 기준을 명시합니다. BE3의 `recommendationClock`과 함께 등록해도 충돌하지 않습니다. 테스트에서 Clock을 대체할 때도 같은 qualifier를 사용합니다.
+
+상품 가격은 기존 상품 API·DB 정책과 동일하게 0원 이상입니다. 추천 카탈로그·AI 입력·저장 스냅샷도 0원을 허용하고 음수는 거절합니다. 예산과 같은 가격의 상품도 0원 상품과 조합할 수 있습니다. 구매 예산의 기존 최소·최대 제한은 유지합니다.
