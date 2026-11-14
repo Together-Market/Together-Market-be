@@ -51,7 +51,7 @@ DB DATETIME은 KST의 LocalDateTime으로 기록합니다. 입력은 오프셋�
 RESERVATION_APPROVAL_WINDOW=PT30M ./gradlew bootRun
 ```
 
-고객 상세·목록·동일 키 재응답 시 기한이 지난 PENDING 예약은 parent 예약 행을 잠근 상태에서 FAILED / APPROVAL_EXPIRED로 갱신합니다. 개별 PENDING 주문은 EXPIRED로 변경하고 기존 APPROVED/REJECTED 기록은 보존합니다. 목록은 갱신 후 status 필터·total_count를 계산합니다. **백그라운드 만료 스케줄러와 점주 승인·거절 API는 후속 작업**입니다. 후속 처리 역시 예약 행을 먼저 잠가야 합니다.
+고객 상세·목록·동일 키 재응답 시 기한이 지난 PENDING 예약은 parent 예약 행을 잠근 상태에서 FAILED / APPROVAL_EXPIRED로 갱신합니다. 개별 PENDING 주문은 EXPIRED로 변경하고 기존 APPROVED/REJECTED 기록은 보존합니다. 목록은 갱신 후 status 필터·total_count를 계산합니다. 점주 승인·거절 API와 백그라운드 만료 스케줄러는 #22에서 동일한 예약 행 잠금과 만료 전이로 연결했습니다. 상세 규칙은 [점주 주문 문서](BE1_OWNER_ORDERS.md)를 참고합니다.
 
 ## 추가 합의 필요
 

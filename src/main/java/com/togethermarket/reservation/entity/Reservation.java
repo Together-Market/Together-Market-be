@@ -133,4 +133,26 @@ public class Reservation {
     failureCode = "APPROVAL_EXPIRED";
     return true;
   }
+
+  public void confirm() {
+    requirePending();
+    status = ReservationStatus.CONFIRMED;
+  }
+
+  public void reject() {
+    requirePending();
+    status = ReservationStatus.FAILED;
+    failureCode = "STORE_REJECTED";
+  }
+
+  private void requirePending() {
+    if (status != ReservationStatus.PENDING)
+      throw new IllegalStateException("Reservation must be pending");
+  }
+
+  public boolean expireIfDue(LocalDateTime now, java.util.List<StoreOrder> orders) {
+    if (!expireIfDue(now)) return false;
+    orders.forEach(StoreOrder::expireIfPending);
+    return true;
+  }
 }
