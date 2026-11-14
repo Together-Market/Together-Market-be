@@ -22,6 +22,7 @@ import java.security.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class ReservationService {
       StoreOrderRepository orders,
       ProductAvailabilityService availability,
       ReservationPolicy policy,
-      Clock clock,
+      @Qualifier("reservationClock") Clock clock,
       EntityManager entityManager) {
     this.users = users;
     this.candidates = candidates;
