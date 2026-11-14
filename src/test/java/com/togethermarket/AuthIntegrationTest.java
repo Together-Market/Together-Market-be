@@ -36,6 +36,8 @@ class AuthIntegrationTest {
 
   @MockitoBean com.togethermarket.reservation.repository.ReservationRepository reservations;
   @MockitoBean com.togethermarket.reservation.repository.StoreOrderRepository orders;
+  @MockitoBean org.springframework.jdbc.core.JdbcTemplate jdbc;
+  @MockitoBean com.togethermarket.store.repository.PublicStoreRecordRepository publicRecords;
   @MockitoBean jakarta.persistence.EntityManager entityManager;
   @MockitoBean ProductRepository products;
   @MockitoBean StoreRepository stores;

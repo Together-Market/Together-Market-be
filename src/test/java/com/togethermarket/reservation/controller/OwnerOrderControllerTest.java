@@ -37,6 +37,8 @@ class OwnerOrderControllerTest {
   @MockitoBean com.togethermarket.recommendation.repository.PurposeCategoryRepository categories;
   @MockitoBean com.togethermarket.reservation.repository.ReservationRepository reservations;
   @MockitoBean com.togethermarket.reservation.repository.StoreOrderRepository orders;
+  @MockitoBean org.springframework.jdbc.core.JdbcTemplate jdbc;
+  @MockitoBean com.togethermarket.store.repository.PublicStoreRecordRepository publicRecords;
   @Autowired MockMvc mvc;
   @MockitoBean ReservationService customerReservations;
   @MockitoBean OwnerOrderService service;

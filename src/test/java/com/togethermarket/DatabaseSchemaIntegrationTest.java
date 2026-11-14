@@ -89,11 +89,11 @@ class DatabaseSchemaIntegrationTest {
         3,
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM purpose_categories WHERE parent_id IS NULL", Integer.class));
-    assertEquals(
-        3,
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1 AND type = 'SQL'",
-            Integer.class));
+    assertTrue(
+        jdbc.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE success = 1 AND type = 'SQL'",
+                String.class)
+            .containsAll(java.util.List.of("1", "2", "3", "4")));
   }
 
   @Test
