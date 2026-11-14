@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local credentials and database-specific CSV demonstration outputs
+.env
+.env.*
+!.env.example
+data/csv-demo/runtime/
+scripts/__pycache__/
