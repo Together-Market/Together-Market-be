@@ -18,4 +18,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select s from Store s where s.id = :id and s.ownerId = :ownerId")
   Optional<Store> findOwnedForUpdate(@Param("id") Long id, @Param("ownerId") Long ownerId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select s from Store s where s.id = :id")
+  Optional<Store> findForReservation(@Param("id") Long id);
 }
