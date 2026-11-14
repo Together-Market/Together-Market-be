@@ -119,8 +119,9 @@ class RecommendationPersistenceIntegrationTest {
         RecommendationItemRepository i,
         com.togethermarket.product.repository.ProductRepository products,
         com.togethermarket.product.service.ProductAvailabilityService availability,
-        TestClock clock) {
-      return new JpaRecommendationJobStore(p, c, i, clock, products, availability);
+        TestClock clock,
+        com.togethermarket.store.repository.StoreRepository stores) {
+      return new JpaRecommendationJobStore(p, c, i, clock, products, availability, stores);
     }
   }
 
@@ -151,6 +152,8 @@ class RecommendationPersistenceIntegrationTest {
         insert(
             "INSERT INTO stores(owner_id,name,business_type,address,phone) VALUES (?, 'b', 'bakery', 'address', '010')",
             customer);
+    jdbc.update(
+        "UPDATE stores SET latitude=37.32117,longitude=127.11011 WHERE id IN (?,?)", shopA, shopB);
     productA =
         insert(
             "INSERT INTO products(store_id,name,description,price_amount,preparation_minutes,sale_status) VALUES (?, 'a', 'gift', 0, 0, 'ON_SALE')",
@@ -347,6 +350,33 @@ class RecommendationPersistenceIntegrationTest {
   void soldOutDuringAiEvaluationIsRemovedBeforeSaving() {
     var lease = claim();
     jdbc.update("UPDATE products SET sale_status='SOLD_OUT' WHERE id=?", productB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  @Test
+  void moveToOtherAreaDuringAiEvaluationCannotBeSaved() {
+    var lease = claim();
+    jdbc.update("UPDATE stores SET latitude=37.2758,longitude=127.1497 WHERE id=?", shopB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  @Test
+  void missingCoordinatesDuringAiEvaluationCannotBeSaved() {
+    var lease = claim();
+    jdbc.update("UPDATE stores SET latitude=NULL,longitude=NULL WHERE id=?", shopB);
+    assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
+    assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
+  }
+
+  @Test
+  void sameMerchantIdentityDiscoveredBeforePersistenceCannotBeSaved() {
+    var lease = claim();
+    jdbc.update(
+        "UPDATE stores SET name='동백문고',address='경기도 용인시 기흥구 동백중앙로 213' WHERE id IN (?,?)",
+        shopA,
+        shopB);
     assertThat(store.complete(lease, List.of(result(productB)), START)).isTrue();
     assertThat(candidates.findByPurchaseRequestIdOrderByRankAscIdAsc(request)).isEmpty();
   }

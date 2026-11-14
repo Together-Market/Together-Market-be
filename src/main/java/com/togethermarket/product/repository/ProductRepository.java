@@ -4,15 +4,20 @@ import com.togethermarket.product.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
-  java.util.Optional<Product> findByIdAndStoreId(Long id, Long storeId);
+  @org.springframework.data.jpa.repository.Query("select coalesce(max(p.id), 0) from Product p")
+  long recommendationHighWaterId();
 
   @org.springframework.data.jpa.repository.Query(
-      "select p.id from Product p where p.saleStatus = :status and p.priceAmount <= :budget order by p.id")
-  java.util.List<Long> findRecommendationProductIds(
+      "select p.id from Product p where p.saleStatus = :status and p.priceAmount <= :budget and p.id > :after and p.id <= :upper order by p.id")
+  java.util.List<Long> findRecommendationProductBatch(
       @org.springframework.data.repository.query.Param("status")
           com.togethermarket.product.entity.SaleStatus status,
       @org.springframework.data.repository.query.Param("budget") java.math.BigDecimal budget,
+      @org.springframework.data.repository.query.Param("after") long after,
+      @org.springframework.data.repository.query.Param("upper") long upper,
       org.springframework.data.domain.Pageable pageable);
+
+  java.util.Optional<Product> findByIdAndStoreId(Long id, Long storeId);
 
   org.springframework.data.domain.Page<Product> findByStoreId(
       Long storeId, org.springframework.data.domain.Pageable pageable);

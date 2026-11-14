@@ -4,6 +4,7 @@ import com.togethermarket.product.entity.Product;
 import com.togethermarket.product.entity.SaleStatus;
 import com.togethermarket.product.repository.ProductRepository;
 import com.togethermarket.store.entity.HourType;
+import com.togethermarket.store.entity.Store;
 import com.togethermarket.store.entity.StoreHour;
 import com.togethermarket.store.repository.StoreHourRepository;
 import com.togethermarket.store.repository.StoreRepository;
@@ -12,8 +13,12 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +53,44 @@ public class DefaultProductAvailabilityService implements ProductAvailabilitySer
     if (!stores.existsById(product.getStoreId())) {
       return new AvailabilityResult(List.of(AvailabilityReason.STORE_NOT_FOUND));
     }
+    return evaluate(product, hours.findByStoreId(product.getStoreId()), pickupAt, checkedAt);
+  }
+
+  @Override
+  public Map<Long, AvailabilityResult> checkAll(
+      Collection<Long> productIds, Instant pickupAt, Instant checkedAt) {
+    Objects.requireNonNull(pickupAt);
+    Objects.requireNonNull(checkedAt);
+    var result = new HashMap<Long, AvailabilityResult>();
+    var ids = productIds.stream().distinct().toList();
+    for (int start = 0; start < ids.size(); start += 500) {
+      var batch = ids.subList(start, Math.min(start + 500, ids.size()));
+      var found = products.findAllById(batch);
+      var storeIds = found.stream().map(Product::getStoreId).distinct().toList();
+      var existing =
+          stores.findAllById(storeIds).stream().map(Store::getId).collect(Collectors.toSet());
+      var schedules =
+          hours.findByStoreIdIn(storeIds).stream()
+              .collect(Collectors.groupingBy(StoreHour::getStoreId));
+      for (Long id : batch)
+        result.put(id, new AvailabilityResult(List.of(AvailabilityReason.PRODUCT_NOT_FOUND)));
+      for (var product : found) {
+        result.put(
+            product.getId(),
+            existing.contains(product.getStoreId())
+                ? evaluate(
+                    product,
+                    schedules.getOrDefault(product.getStoreId(), List.of()),
+                    pickupAt,
+                    checkedAt)
+                : new AvailabilityResult(List.of(AvailabilityReason.STORE_NOT_FOUND)));
+      }
+    }
+    return Map.copyOf(result);
+  }
+
+  private AvailabilityResult evaluate(
+      Product product, List<StoreHour> schedules, Instant pickupAt, Instant checkedAt) {
     List<AvailabilityReason> reasons = new ArrayList<>();
     if (product.getSaleStatus() != SaleStatus.ON_SALE)
       reasons.add(AvailabilityReason.PRODUCT_NOT_ON_SALE);
@@ -57,7 +100,6 @@ public class DefaultProductAvailabilityService implements ProductAvailabilitySer
         < 0) {
       reasons.add(AvailabilityReason.PREPARATION_TIME_INSUFFICIENT);
     }
-    List<StoreHour> schedules = hours.findByStoreId(product.getStoreId());
     LocalDateTime localPickup = LocalDateTime.ofInstant(pickupAt, STORE_ZONE);
     if (!evaluator.allows(schedules, HourType.BUSINESS, localPickup))
       reasons.add(AvailabilityReason.OUTSIDE_BUSINESS_HOURS);

@@ -34,7 +34,31 @@ public final class CandidateData {
       long priceAmount,
       Set<Long> purposeCategoryIds,
       Double latitude,
-      Double longitude) {
+      Double longitude,
+      String storeIdentity) {
+    public Product(
+        Long id,
+        Long storeId,
+        String name,
+        String description,
+        String businessType,
+        long priceAmount,
+        Set<Long> purposeCategoryIds,
+        Double latitude,
+        Double longitude) {
+      this(
+          id,
+          storeId,
+          name,
+          description,
+          businessType,
+          priceAmount,
+          purposeCategoryIds,
+          latitude,
+          longitude,
+          "id:" + storeId);
+    }
+
     public Product {
       positive(id);
       positive(storeId);
@@ -45,6 +69,7 @@ public final class CandidateData {
           || businessType.isBlank()) {
         throw new IllegalArgumentException("Invalid catalog product");
       }
+      Objects.requireNonNull(storeIdentity);
       purposeCategoryIds = Set.copyOf(purposeCategoryIds);
       purposeCategoryIds.forEach(CandidateData::positive);
     }
