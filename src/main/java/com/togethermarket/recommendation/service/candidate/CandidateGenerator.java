@@ -147,9 +147,10 @@ public final class CandidateGenerator {
             || !preferences.text().accepts(matches.get(a.id()), matches.get(b.id()))
             || b.priceAmount() > purchase.budgetAmount() - a.priceAmount()) continue;
         var distance =
-            StoreDistanceCalculator.straightLineMeters(
+            StoreDistanceCalculator.preciseStraightLineMeters(
                 a.latitude(), a.longitude(), b.latitude(), b.longitude());
         double meters = distance.orElseThrow();
+        if (!StorePairDistance.allows(meters)) continue;
         double score =
             100 * preferences.text().coverage(matches.get(a.id()), matches.get(b.id()))
                 + productScores.get(a.id())
