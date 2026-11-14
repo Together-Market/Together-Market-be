@@ -38,6 +38,13 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+tasks.named('processResources') {
+	from('data/csv-demo') {
+		include 'catalog.json', 'manifest.json', 'raw/*.csv'
+		into 'csv-demo'
+	}
+}
+
 spotless {
  java { googleJavaFormat('1.28.0') }
 }
