@@ -143,16 +143,15 @@ class CustomerReadDatabaseIntegrationTest {
   }
 
   @Test
-  void foreignCustomerAndMissingCoordinatesAreRejectedAgainstDatabase() {
+  void foreignCustomerIsRejectedAndMissingCoordinatesReturnUnavailable() {
     assertThatThrownBy(() -> service.locations(Long.toString(candidate), customer + 10000))
         .isInstanceOfSatisfying(
             PurchaseInputException.class, e -> assertThat(e.code()).isEqualTo("FORBIDDEN"));
     jdbc.update("UPDATE stores SET latitude=NULL,longitude=NULL WHERE id=?", storeA);
     em.clear();
     assertThat(service.store(Long.toString(storeA), customer).latitude()).isNull();
-    assertThatThrownBy(() -> service.locations(Long.toString(candidate), customer))
-        .isInstanceOfSatisfying(
-            PurchaseInputException.class,
-            e -> assertThat(e.code()).isEqualTo("STORE_LOCATION_UNAVAILABLE"));
+    var locations = service.locations(Long.toString(candidate), customer);
+    assertThat(locations.distanceMeters()).isNull();
+    assertThat(locations.locationStatus()).isEqualTo("UNAVAILABLE");
   }
 }

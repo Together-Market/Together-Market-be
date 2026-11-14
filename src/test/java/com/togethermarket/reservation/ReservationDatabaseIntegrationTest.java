@@ -19,6 +19,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.*;
 import org.springframework.context.annotation.*;
@@ -69,11 +71,29 @@ class ReservationDatabaseIntegrationTest {
     var owner =
         users.saveAndFlush(
             new User(UUID.randomUUID() + "@test.invalid", "hash", "점주", UserRole.OWNER));
-    var a = stores.saveAndFlush(new Store(owner.getId(), "꽃", "꽃", "주소A", null, null, "010"));
+    var a =
+        stores.saveAndFlush(
+            new Store(
+                owner.getId(),
+                "꽃",
+                "꽃",
+                "주소A",
+                new BigDecimal("37.0000000"),
+                new BigDecimal("127.0000000"),
+                "010"));
     var ownerB =
         users.saveAndFlush(
             new User(UUID.randomUUID() + "@test.invalid", "hash", "점주B", UserRole.OWNER));
-    var b = stores.saveAndFlush(new Store(ownerB.getId(), "케이크", "제과", "주소B", null, null, "010"));
+    var b =
+        stores.saveAndFlush(
+            new Store(
+                ownerB.getId(),
+                "케이크",
+                "제과",
+                "주소B",
+                new BigDecimal("37.0010000"),
+                new BigDecimal("127.0000000"),
+                "010"));
     var pickup = LocalDateTime.of(2026, 11, 20, 15, 0);
     for (var store : List.of(a, b))
       for (var type : HourType.values())
@@ -155,6 +175,49 @@ class ReservationDatabaseIntegrationTest {
     }
   }
 
+  @ParameterizedTest
+  @CsvSource(
+      nullValues = "NULL",
+      textBlock =
+          """
+      NULL,127.0000000
+      37.0010000,NULL
+      37.0044967,127.0000000
+      """)
+  void changedCoordinatesRejectWithoutWritesAndTheSameKeyCanBeRetried(
+      BigDecimal latitude, BigDecimal longitude) {
+    var f = fixture();
+    String key = UUID.randomUUID().toString();
+    jdbc.update(
+        "update stores set latitude=?, longitude=? where id=?",
+        latitude,
+        longitude,
+        f.second().getStoreId());
+    var error =
+        assertThrows(
+            com.togethermarket.global.api.ApiException.class,
+            () -> service.create(f.customer(), key, f.input()));
+    assertEquals("STORE_DISTANCE_EXCEEDED_OR_UNKNOWN", error.code());
+    assertEquals(org.springframework.http.HttpStatus.CONFLICT, error.status());
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "select count(*) from reservations where customer_id=?", Integer.class, f.customer()));
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "select count(*) from store_orders where product_id in (?,?)",
+            Integer.class,
+            f.first().getId(),
+            f.second().getId()));
+    jdbc.update(
+        "update stores set latitude=?, longitude=? where id=?",
+        new BigDecimal("37.0010000"),
+        new BigDecimal("127.0000000"),
+        f.second().getStoreId());
+    assertFalse(service.create(f.customer(), key, f.input()).replay());
+  }
+
   @Test
   void failureDuringSecondOrderRollsBackReservationAndFirstOrder() {
     var f = fixture();
@@ -202,6 +265,7 @@ class ReservationDatabaseIntegrationTest {
     assertThrows(
         com.togethermarket.global.api.ApiException.class,
         () -> service.detail(f.customer() + 999999, id));
+    jdbc.update("update stores set latitude=null where id=?", f.second().getStoreId());
     assertTrue(service.create(f.customer(), key, f.input()).replay());
   }
 

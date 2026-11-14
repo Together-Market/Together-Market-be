@@ -6,6 +6,7 @@ import com.togethermarket.product.repository.ProductRepository;
 import com.togethermarket.product.service.ProductAvailabilityService;
 import com.togethermarket.recommendation.entity.RecommendationStatus;
 import com.togethermarket.recommendation.repository.*;
+import com.togethermarket.recommendation.service.candidate.StorePairDistance;
 import com.togethermarket.reservation.dto.request.CreateReservationRequest;
 import com.togethermarket.reservation.dto.response.ReservationResponse;
 import com.togethermarket.reservation.entity.*;
@@ -133,8 +134,21 @@ public class ReservationService {
     if (storeIds.size() != 2 || !storeIds.equals(pickupMap.keySet()))
       throw invalid("추천 구성과 수령 점포가 일치해야 합니다.");
     var lockedStores = new HashMap<Long, Store>();
-    for (var store : storeIds)
-      lockedStores.put(store, stores.findForReservation(store).orElseThrow(this::notFound));
+    for (var storeId : storeIds) {
+      var store = stores.findForReservation(storeId).orElseThrow(this::notFound);
+      // A locking query can reuse an already managed entity. Refresh while holding the row lock.
+      entityManager.refresh(store, LockModeType.PESSIMISTIC_WRITE);
+      lockedStores.put(storeId, store);
+    }
+    var a = lockedStores.get(storeIds.first());
+    var b = lockedStores.get(storeIds.last());
+    if (!StorePairDistance.allows(
+        coordinate(a.getLatitude()),
+        coordinate(a.getLongitude()),
+        coordinate(b.getLatitude()),
+        coordinate(b.getLongitude())))
+      throw conflict(
+          "STORE_DISTANCE_EXCEEDED_OR_UNKNOWN", "두 점포의 위치를 확인할 수 없거나 직선거리가 500m를 초과합니다.");
     // Initial product reads only identify immutable store IDs. Refresh after locking to avoid stale
     // price/status snapshots.
     for (var product : selected) entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE);
@@ -303,6 +317,10 @@ public class ReservationService {
 
   private static LocalDateTime local(Instant t) {
     return LocalDateTime.ofInstant(t, KST);
+  }
+
+  private static Double coordinate(BigDecimal value) {
+    return value == null ? null : value.doubleValue();
   }
 
   private static OffsetDateTime offset(LocalDateTime t) {

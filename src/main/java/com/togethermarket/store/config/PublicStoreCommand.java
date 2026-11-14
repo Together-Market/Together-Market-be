@@ -9,7 +9,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("public-data")
+@Profile("public-data & !coordinate-backfill")
 public class PublicStoreCommand implements ApplicationRunner {
   private final Environment env;
   private final PublicStoreClient client;

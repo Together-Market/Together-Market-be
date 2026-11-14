@@ -5,6 +5,8 @@ import com.togethermarket.store.dto.request.StoreWriteRequest;
 import com.togethermarket.store.dto.response.*;
 import com.togethermarket.store.exception.OwnerStoreException;
 import com.togethermarket.store.service.OwnerStoreService;
+import com.togethermarket.store.service.geocoding.AddressGeocoder;
+import com.togethermarket.store.service.geocoding.KakaoAddressGeocoder;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -15,10 +17,26 @@ import org.springframework.web.bind.annotation.*;
 public class OwnerStoreController {
   private final OwnerStoreService service;
   private final OwnerAccess access;
+  private final AddressGeocoder geocoder;
 
-  public OwnerStoreController(OwnerStoreService service, OwnerAccess access) {
+  public OwnerStoreController(
+      OwnerStoreService service, OwnerAccess access, AddressGeocoder geocoder) {
     this.service = service;
     this.access = access;
+    this.geocoder = geocoder;
+  }
+
+  @GetMapping("/geocode")
+  public org.springframework.http.ResponseEntity<OwnerStoreEnvelope<GeocodeResponse>> geocode(
+      HttpServletRequest request,
+      @RequestParam(name = "address", required = false) String address) {
+    access.requireOwner(request);
+    String normalized = KakaoAddressGeocoder.address(address);
+    return org.springframework.http.ResponseEntity.ok()
+        .cacheControl(org.springframework.http.CacheControl.noStore())
+        .body(
+            new OwnerStoreEnvelope<>(
+                GeocodeResponse.preview(normalized, geocoder.lookup(normalized))));
   }
 
   @GetMapping

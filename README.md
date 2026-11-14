@@ -4,6 +4,10 @@ Java 21 · Spring Boot 4.1.2 · Gradle(Groovy) · MySQL 8.4 · JPA · Flyway
 
 ## 로컬 실행
 
+주소 미리보기와 기존 좌표 보완: [API 명세·프런트 전달](docs/kakao-geocoding-api.md), [키 설정·배포 준비](docs/kakao-setup-deployment.md), [데이터 보완 실행](docs/coordinate-backfill.md). 카카오 결과 영구 저장은 공식 이용 조건에 따라 차단하며 공공데이터 좌표를 우선 사용합니다.
+
+백엔드 우선 배포 준비: [점검·보안 검토 결과](docs/predeployment-review.md), [사용자 커밋·푸시·PR 순서](docs/git-release-guide.md). 최종 신규 예약도 현재 좌표로 직선거리 500m 조건을 검사합니다.
+
 팀 공유 CSV 점포와 시연 상품 데이터를 설치하려면 [CSV 시연 DB 준비](docs/csv-demo-data.md)를 참고하세요. CSV 원문·상품/가격 스냅샷·입력 스크립트를 포함하며, 새 MySQL DB에서도 동일한 카탈로그를 구성할 수 있습니다.
 
 MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 환경변수로 설정합니다.
@@ -58,4 +62,4 @@ URL은 /api/v1 접두사 없이 기존 명세의 경로를 사용합니다. JSON
 
 상품 이미지는 image_url로 등록·수정하며 업로드 API는 이번 범위에 없습니다. 상품 삭제·점포 탈퇴는 제외하고 판매 중지는 PAUSED로 처리합니다.
 
-CSV 시연 데이터는 기본 `local` 또는 `demo` 프로필로 서버를 시작하면 연결된 DB에 자동 입력됩니다. 먼저 시연 전용 DB의 접속 정보를 설정하세요. 재시작 시 기존 데이터는 유지됩니다. 자세한 설정과 자동 입력 비활성화 방법은 [CSV 시연 데이터 안내](docs/csv-demo-data.md)를 참고하세요.
+CSV 시연 데이터 자동 입력은 기본 OFF입니다. 새 시연 DB에 입력할 때만 `local` 또는 `demo` 프로필과 `--demo.catalog.enabled=true`를 명시합니다. 기존 시연 DB의 서버 실행에는 `--demo.catalog.enabled=false`를 유지하세요. 자세한 설정은 [CSV 시연 데이터 안내](docs/csv-demo-data.md)를 참고하세요.

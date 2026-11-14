@@ -21,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest(
     properties = {
       "spring.autoconfigure.exclude=",
+      "demo.catalog.enabled=true",
       "spring.datasource.url=${CSV_DEMO_TEST_URL}",
       "spring.datasource.username=${MYSQL_TEST_USERNAME:root}",
       "spring.datasource.password=${MYSQL_TEST_PASSWORD}",

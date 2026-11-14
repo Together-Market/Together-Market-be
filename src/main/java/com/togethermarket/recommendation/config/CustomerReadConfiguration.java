@@ -46,7 +46,8 @@ public class CustomerReadConfiguration {
             .collect(Collectors.toSet());
     boolean required =
         switch (env.getRequiredProperty("recommendation.customer-read.coordinate-policy")) {
-          case "DETAIL_NULL_MAP_ERROR" -> false;
+          // Keep the previous configuration spelling as an alias for existing deployments.
+          case "DETAIL_NULL_MAP_NULL", "DETAIL_NULL_MAP_ERROR" -> false;
           case "ALL_COORDINATES_REQUIRED" -> true;
           default -> throw new IllegalArgumentException("Choose a supported coordinate policy");
         };
