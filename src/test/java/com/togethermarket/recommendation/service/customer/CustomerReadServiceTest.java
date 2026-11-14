@@ -198,7 +198,11 @@ class CustomerReadServiceTest {
               List.of(
                   store(21, latitude, BigDecimal.ZERO),
                   store(22, BigDecimal.ZERO, BigDecimal.ZERO)));
-      fails("STORE_LOCATION_UNAVAILABLE", () -> service.locations("5", 2L));
+      var result = service.locations("5", 2L);
+      assertThat(result.distanceMeters()).isNull();
+      assertThat(result.locationStatus()).isEqualTo("UNAVAILABLE");
+      assertThat(result.stores().getFirst().latitude()).isNull();
+      assertThat(result.stores().getFirst().longitude()).isNull();
     }
   }
 
@@ -211,6 +215,7 @@ class CustomerReadServiceTest {
                 store(21, BigDecimal.ZERO, BigDecimal.ZERO),
                 store(22, BigDecimal.ZERO, BigDecimal.ZERO)));
     assertThat(service.locations("5", 2L).distanceMeters()).isZero();
+    assertThat(service.locations("5", 2L).locationStatus()).isEqualTo("AVAILABLE");
   }
 
   @Test

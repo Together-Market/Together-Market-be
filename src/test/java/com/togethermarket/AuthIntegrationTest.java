@@ -22,9 +22,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.cors.allowed-origins=http://localhost:5173")
 @AutoConfigureMockMvc
 class AuthIntegrationTest {
+  @MockitoBean com.togethermarket.store.service.geocoding.AddressGeocoder geocoder;
+
   @MockitoBean
   com.togethermarket.recommendation.repository.RecommendationCandidateRepository candidates;
 
@@ -106,6 +108,9 @@ class AuthIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.role").value("CUSTOMER"));
     mvc.perform(get("/owner/stores").session(before.session())).andExpect(status().isForbidden());
+    mvc.perform(get("/owner/stores/geocode").param("address", "주소").session(before.session()))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(geocoder);
     mvc.perform(
             post("/auth/logout").session(before.session()).header("X-CSRF-TOKEN", before.token()))
         .andExpect(status().isForbidden());
@@ -171,5 +176,111 @@ class AuthIntegrationTest {
                 .content("{\"email\":\"owner@example.com\",\"password\":\"password\"}"))
         .andExpect(status().isOk());
     mvc.perform(get("/owner/stores").session(t.session())).andExpect(status().isOk());
+    when(geocoder.lookup("도로 주소 1"))
+        .thenReturn(
+            new com.togethermarket.store.service.geocoding.Coordinates(
+                new java.math.BigDecimal("37.2758538"), new java.math.BigDecimal("127.1512813")));
+    mvc.perform(get("/owner/stores/geocode").session(t.session()).param("address", "도로 주소 1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.storage_allowed").value(false));
+    mvc.perform(get("/owner/stores/geocode").param("address", "도로 주소 1"))
+        .andExpect(status().isUnauthorized());
+    mvc.perform(
+            patch("/owner/stores/1")
+                .session(t.session())
+                .contentType("application/json")
+                .content("{\"phone\":\"new\"}"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+    verify(geocoder, times(1)).lookup("도로 주소 1");
+  }
+
+  @Test
+  void allowedPreflightDoesNotRequireLoginOrCsrf() throws Exception {
+    mvc.perform(
+            options("/reservations")
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "POST")
+                .header(
+                    "Access-Control-Request-Headers", "content-type,x-csrf-token,idempotency-key"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+        .andExpect(header().string("Access-Control-Allow-Credentials", "true"))
+        .andExpect(
+            header()
+                .string(
+                    "Access-Control-Allow-Headers",
+                    org.hamcrest.Matchers.containsString("idempotency-key")));
+    verifyNoInteractions(geocoder);
+  }
+
+  @Test
+  void otherOriginsAndUnsupportedPreflightHeadersAreRejected() throws Exception {
+    for (String origin :
+        new String[] {
+          "http://localhost:5174", "http://127.0.0.1:5173", "https://untrusted.invalid", "null"
+        }) {
+      mvc.perform(
+              options("/auth/login")
+                  .header("Origin", origin)
+                  .header("Access-Control-Request-Method", "POST"))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("CORS_REJECTED"))
+          .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+    mvc.perform(
+            options("/auth/login")
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "x-unapproved-header"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("CORS_REJECTED"));
+  }
+
+  @Test
+  void corsDoesNotBypassSessionAuthenticationOrCsrf() throws Exception {
+    mvc.perform(get("/auth/me").header("Origin", "http://localhost:5173"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+    mvc.perform(
+            post("/auth/login")
+                .header("Origin", "http://localhost:5173")
+                .contentType("application/json")
+                .content("{\"email\":\"customer@example.com\",\"password\":\"password\"}"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("CSRF_INVALID"))
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+  }
+
+  @Test
+  void allowedOriginCanLoginAndReadItsSession() throws Exception {
+    var before = token(null);
+    mvc.perform(
+            post("/auth/login")
+                .session(before.session())
+                .header("Origin", "http://localhost:5173")
+                .header("X-CSRF-TOKEN", before.token())
+                .contentType("application/json")
+                .content("{\"email\":\"customer@example.com\",\"password\":\"password\"}"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+    mvc.perform(get("/auth/me").session(before.session()).header("Origin", "http://localhost:5173"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.role").value("CUSTOMER"));
+    mvc.perform(
+            post("/auth/logout")
+                .session(before.session())
+                .header("Origin", "http://localhost:5173")
+                .header("X-CSRF-TOKEN", before.token()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+    var after = token(before.session());
+    mvc.perform(
+            post("/auth/logout")
+                .session(after.session())
+                .header("Origin", "http://localhost:5173")
+                .header("X-CSRF-TOKEN", after.token()))
+        .andExpect(status().isOk());
   }
 }

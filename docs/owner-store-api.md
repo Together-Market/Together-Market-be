@@ -1,5 +1,7 @@
 # OWN-01~03 점포 관리
 
+> 2026-11-15 변경: [주소·좌표 API 명세](kakao-geocoding-api.md)가 아래의 과거 좌표 입력 설명보다 우선한다. 카카오 실시간 미리보기 GET `/owner/stores/geocode` 추가, 카카오 결과 저장 차단, null 좌표 등록/삭제 차단, 주소 변경 시 새 좌표 한 쌍 요구. 실제 세션 인증·CSRF는 현재 `SecurityConfiguration`/`OwnerAccess`에 연결되어 있으며 아래 BE1 연결 대기 설명은 초기 구현 기록이다.
+
 Notion OWN-01~03의 경로/정상 응답을 기준으로 구현했다.
 
 - GET /owner/stores: 본인 점포만 id 내림차순. page=1, size=20 기본, size 1~100.

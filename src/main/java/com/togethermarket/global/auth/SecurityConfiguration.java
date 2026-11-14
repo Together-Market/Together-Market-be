@@ -47,8 +47,15 @@ public class SecurityConfiguration {
       type =
           org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.SERVLET)
   SecurityFilterChain securityFilterChain(
-      HttpSecurity http, SecurityContextRepository contexts, CsrfTokenRepository tokens)
+      HttpSecurity http,
+      SecurityContextRepository contexts,
+      CsrfTokenRepository tokens,
+      org.springframework.web.cors.UrlBasedCorsConfigurationSource corsSource)
       throws Exception {
+    // Replace the auto-configured CORS filter so rejections use the common JSON format.
+    http.cors(c -> c.disable());
+    // Preflight has no session or CSRF token; process it before CSRF and authorization.
+    http.addFilterBefore(CorsConfiguration.filter(corsSource), CsrfFilter.class);
     // Plain header tokens are intentional: the JSON endpoint delivers the session token.
     http.csrf(
         c ->

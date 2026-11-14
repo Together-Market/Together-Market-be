@@ -140,4 +140,25 @@ class ReservationControllerTest {
         .andExpect(jsonPath("$.errors[0].field").value("pickups[0].requested_pickup_at"))
         .andExpect(jsonPath("$.errors[0].reason").isString());
   }
+
+  @Test
+  void distanceRejectionUses409AndCommonErrorBody() throws Exception {
+    when(service.create(eq(1L), anyString(), any()))
+        .thenThrow(
+            new com.togethermarket.global.api.ApiException(
+                org.springframework.http.HttpStatus.CONFLICT,
+                "STORE_DISTANCE_EXCEEDED_OR_UNKNOWN",
+                "두 점포의 위치를 확인할 수 없거나 직선거리가 500m를 초과합니다."));
+    mvc.perform(
+            post("/reservations")
+                .with(as(UserRole.CUSTOMER))
+                .with(csrf().asHeader())
+                .header("Idempotency-Key", "b492964a-c36b-4436-8a4e-d3e2e7cd138e")
+                .contentType("application/json")
+                .content(BODY))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("STORE_DISTANCE_EXCEEDED_OR_UNKNOWN"))
+        .andExpect(jsonPath("$.errors").isEmpty())
+        .andExpect(jsonPath("$.data").doesNotExist());
+  }
 }

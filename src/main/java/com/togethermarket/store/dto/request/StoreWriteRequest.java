@@ -1,6 +1,5 @@
 package com.togethermarket.store.dto.request;
 
-import com.togethermarket.store.entity.Store;
 import com.togethermarket.store.exception.OwnerStoreException;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -14,9 +13,17 @@ public record StoreWriteRequest(
     BigDecimal latitude,
     BigDecimal longitude,
     String phone,
+    String coordinateSource,
     Set<String> fields) {
   private static final Set<String> ALLOWED =
-      Set.of("name", "business_type", "address", "latitude", "longitude", "phone");
+      Set.of(
+          "name",
+          "business_type",
+          "address",
+          "latitude",
+          "longitude",
+          "phone",
+          "coordinate_source");
 
   public StoreWriteRequest {
     fields = Set.copyOf(fields);
@@ -28,9 +35,8 @@ public record StoreWriteRequest(
     for (String key : body.keySet())
       if (!ALLOWED.contains(key)) throw OwnerStoreException.invalid(key, "허용되지 않은 필드입니다.");
     if (create)
-      for (String key : ALLOWED)
-        if (!body.containsKey(key))
-          throw OwnerStoreException.invalid(key, "필수 필드입니다. 좌표가 없으면 null을 입력해 주세요.");
+      for (String key : Set.of("name", "business_type", "address", "phone"))
+        if (!body.containsKey(key)) throw OwnerStoreException.invalid(key, "필수 필드입니다.");
     return new StoreWriteRequest(
         text(body, "name", 150),
         text(body, "business_type", 100),
@@ -38,7 +44,16 @@ public record StoreWriteRequest(
         coordinate(body, "latitude", 90),
         coordinate(body, "longitude", 180),
         text(body, "phone", 30),
+        source(body),
         body.keySet());
+  }
+
+  private static String source(Map<String, Object> body) {
+    if (!body.containsKey("coordinate_source")) return "PROVIDED";
+    Object value = body.get("coordinate_source");
+    if (!"PROVIDED".equals(value) && !"KAKAO".equals(value))
+      throw OwnerStoreException.invalid("coordinate_source", "PROVIDED 또는 KAKAO여야 합니다.");
+    return (String) value;
   }
 
   private static String text(Map<String, Object> body, String key, int max) {
@@ -66,13 +81,5 @@ public record StoreWriteRequest(
 
   public boolean has(String field) {
     return fields.contains(field);
-  }
-
-  public void validateCoordinates(Store existing) {
-    BigDecimal lat = has("latitude") ? latitude : existing == null ? null : existing.getLatitude();
-    BigDecimal lon =
-        has("longitude") ? longitude : existing == null ? null : existing.getLongitude();
-    if ((lat == null) != (lon == null))
-      throw OwnerStoreException.invalid("latitude", "위도와 경도는 모두 값이 있거나 모두 null이어야 합니다.");
   }
 }

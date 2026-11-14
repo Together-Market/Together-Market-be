@@ -22,17 +22,21 @@
 
 ## 합의 필요
 
-- 배포 FE/BE 도메인과 CORS 허용 목록, HTTPS 및 SameSite/Secure 쿠키 설정
+- 백엔드 HTTPS 배포 주소와 MySQL 실행 위치. 프런트는 `http://localhost:5173` 로컬 실행으로 확정
 - 세션 만료시간, 다중 서버 운영 시 세션 공유 방식
 - 비로그인 공개 조회 범위, API 접두사, 최종 오류 코드표
 
-현재는 동일 출처 개발 기준이며 교차 출처 허용은 설정하지 않았습니다. 세션은 서버 메모리에 저장되므로 서버 재시작 시 로그아웃됩니다. HttpOnly와 쿠키 전용 세션 전달을 적용했습니다. 배포 정책 확정 전 운영 배포 준비 완료로 간주하지 않습니다.
+교차 출처 허용은 `CORS_ALLOWED_ORIGINS` 환경변수로 지정합니다. 현재 프런트 주소인 `http://localhost:5173`을 넣고 서버를 재시작합니다. 쉼표로 여러 출처를 지정할 수 있고, 빈 값이면 동일 출처만 허용합니다. 와일드카드·경로·끝의 `/`는 거부합니다. 쿠키 포함 요청과 `X-CSRF-TOKEN`, `Idempotency-Key`를 허용하며 preflight OPTIONS를 인증 전에 처리합니다. 실제 요청의 세션·역할·CSRF 검사는 유지됩니다. CORS 거부는 공통 JSON 형식의 `403 CORS_REJECTED`이며 브라우저는 허용되지 않은 출처에 오류 본문도 공개하지 않을 수 있습니다.
+
+프런트의 모든 요청은 fetch `credentials: "include"` 또는 Axios `withCredentials: true`를 사용합니다. 로컬 프런트에서 배포 HTTPS 백엔드를 직접 호출할 때는 배포 서버에 `SERVER_SERVLET_SESSION_COOKIE_SECURE=true`, `SERVER_SERVLET_SESSION_COOKIE_SAME_SITE=none`을 설정합니다. 로컬 HTTP 백엔드에는 이 배포용 쿠키 설정을 적용하지 않습니다. 브라우저의 서드파티 쿠키 차단은 별도로 검증해야 합니다. 상세 설정·프록시 대안은 [배포 안내](kakao-setup-deployment.md)를 참고합니다.
+
+세션은 서버 메모리에 저장되므로 서버 재시작 시 로그아웃됩니다. HttpOnly와 쿠키 전용 세션 전달을 적용했습니다. 실제 브라우저·배포 DB 확인 전 운영 배포 준비 완료로 간주하지 않습니다.
 
 ## 검증
 
 `./gradlew build spotlessCheck`
 
-DB 없이 MockMvc + 실제 Security 필터로 세션 로그인, 세션 ID 교체, CSRF 갱신/누락/구 토큰 거부, 로그아웃, 잘못된 입력·비밀번호, 고객의 점포 접근 거부, 점주의 기존 점포 API 연결을 확인합니다. 실제 MySQL 검증은 기존 `MYSQL_TEST_URL` 등 환경변수를 설정해야 실행됩니다.
+DB 없이 MockMvc + 실제 Security 필터로 세션 로그인, 세션 ID 교체, CSRF 갱신/누락/구 토큰 거부, 로그아웃, 잘못된 입력·비밀번호, 고객의 점포 접근 거부, 점주의 기존 점포 API 연결을 확인합니다. CORS는 허용 출처의 preflight·세션 로그인, 다른 호스트/포트·허용하지 않은 헤더 거부, 인증·CSRF 유지, 비정상 허용 목록의 시작 실패를 확인합니다. 실제 MySQL 검증은 기존 `MYSQL_TEST_URL` 등 환경변수를 설정해야 실행됩니다.
 
 ## 공통 오류 응답 보완
 

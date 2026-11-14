@@ -160,17 +160,25 @@ public class CustomerReadService {
             .collect(Collectors.toMap(Store::getId, Function.identity()));
     if (!byStore.keySet().equals(Set.copyOf(storeIds))) throw invalidComposition();
     // Preserve recommendation item order, independent of repository IN-query result order.
-    var ordered = storeIds.stream().map(byStore::get).map(s -> summary(s, true)).toList();
+    var ordered = storeIds.stream().map(byStore::get).map(s -> summary(s, false)).toList();
     var a = ordered.get(0);
     var b = ordered.get(1);
-    long distance =
+    var distance =
         StoreDistanceCalculator.straightLineMeters(
-                a.latitude().doubleValue(),
-                a.longitude().doubleValue(),
-                b.latitude().doubleValue(),
-                b.longitude().doubleValue())
-            .orElseThrow(CustomerReadService::invalidLocation);
-    return new RecommendationLocationsResponse(id.toString(), ordered, distance, "STRAIGHT_LINE");
+            number(a.latitude()),
+            number(a.longitude()),
+            number(b.latitude()),
+            number(b.longitude()));
+    return new RecommendationLocationsResponse(
+        id.toString(),
+        ordered,
+        distance.isPresent() ? distance.getAsLong() : null,
+        "STRAIGHT_LINE",
+        distance.isPresent() ? "AVAILABLE" : "UNAVAILABLE");
+  }
+
+  private static Double number(BigDecimal value) {
+    return value == null ? null : value.doubleValue();
   }
 
   private static CustomerStoreSummary summary(Store s, boolean coordinatesRequired) {

@@ -1,0 +1,21 @@
+# Reference only: not automatically loaded. Enter real values yourself in the runtime's settings.
+# Keep secret values out of this tracked file.
+DB_URL=
+DB_USERNAME=
+DB_PASSWORD=
+KAKAO_REST_API_KEY=
+GEMINI_API_KEY=
+
+# Existing hackathon demo policy, with automatic catalog seeding disabled.
+SPRING_PROFILES_ACTIVE=demo
+DEMO_CATALOG_ENABLED=false
+RESERVATION_APPROVAL_WINDOW=PT30M
+
+# Confirmed frontend development origin. No trailing slash or API path.
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+# Local frontend calling the deployed HTTPS backend directly across sites.
+# Omit these two cookie overrides when the backend also runs on HTTP localhost.
+# Browser third-party cookie restrictions still require a real frontend login check.
+SERVER_SERVLET_SESSION_COOKIE_SECURE=true
+SERVER_SERVLET_SESSION_COOKIE_SAME_SITE=none

@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 
 /** Runs after context initialization (including Flyway), before application readiness. */
 @Component
-@Profile("(local | demo) & !prod & !production")
-@ConditionalOnProperty(name = "demo.catalog.enabled", havingValue = "true", matchIfMissing = true)
+@Profile("(local | demo) & !prod & !production & !coordinate-backfill")
+@ConditionalOnProperty(name = "demo.catalog.enabled", havingValue = "true")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CsvDemoInitializer implements ApplicationRunner {
   private static final System.Logger LOG = System.getLogger(CsvDemoInitializer.class.getName());

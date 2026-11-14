@@ -15,7 +15,7 @@ import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("demo-stores")
+@Profile("demo-stores & !coordinate-backfill")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class DemoStoreRegistrationCommand implements ApplicationRunner {
   private final Environment env;

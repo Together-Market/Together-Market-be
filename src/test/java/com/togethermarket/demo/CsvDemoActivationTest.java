@@ -14,23 +14,28 @@ class CsvDemoActivationTest {
           .withBean(DataSource.class, () -> mock(DataSource.class));
 
   @Test
-  void localAndDemoEnableAutomaticImport() {
+  void localAndDemoRequireExplicitOptIn() {
     for (String profile : new String[] {"local", "demo", "demo,csv-demo"}) {
       runner
           .withPropertyValues("spring.profiles.active=" + profile)
+          .run(context -> assertThat(context).doesNotHaveBean(CsvDemoInitializer.class));
+      runner
+          .withPropertyValues("spring.profiles.active=" + profile, "demo.catalog.enabled=true")
           .run(context -> assertThat(context).hasSingleBean(CsvDemoInitializer.class));
     }
     runner
         .withPropertyValues("spring.profiles.default=local")
-        .run(context -> assertThat(context).hasSingleBean(CsvDemoInitializer.class));
+        .run(context -> assertThat(context).doesNotHaveBean(CsvDemoInitializer.class));
   }
 
   @Test
   void productionAndExplicitDisableNeverRegisterTheInitializer() {
     for (String profile :
-        new String[] {"prod", "production", "local,prod", "demo,production", "test"}) {
+        new String[] {
+          "prod", "production", "local,prod", "demo,production", "test", "demo,coordinate-backfill"
+        }) {
       runner
-          .withPropertyValues("spring.profiles.active=" + profile)
+          .withPropertyValues("spring.profiles.active=" + profile, "demo.catalog.enabled=true")
           .run(context -> assertThat(context).doesNotHaveBean(CsvDemoInitializer.class));
     }
     runner

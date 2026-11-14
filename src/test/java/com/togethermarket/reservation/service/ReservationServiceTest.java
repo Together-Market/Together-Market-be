@@ -22,6 +22,8 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class ReservationServiceTest {
@@ -96,7 +98,17 @@ class ReservationServiceTest {
     when(products.findById(10L)).thenReturn(Optional.of(p1));
     when(products.findById(20L)).thenReturn(Optional.of(p2));
     for (long i = 3; i <= 4; i++) {
-      var store = id(new Store(9L, "점포" + i, "업종", "주소" + i, null, null, "010"), i);
+      var store =
+          id(
+              new Store(
+                  9L,
+                  "점포" + i,
+                  "업종",
+                  "주소" + i,
+                  new BigDecimal(i == 3 ? "37.0000000" : "37.0010000"),
+                  new BigDecimal("127.0000000"),
+                  "010"),
+              i);
       when(stores.findForReservation(i)).thenReturn(Optional.of(store));
       when(stores.findById(i)).thenReturn(Optional.of(store));
     }
@@ -230,6 +242,101 @@ class ReservationServiceTest {
     when(availability.check(eq(10L), any(), any()))
         .thenReturn(new AvailabilityResult(List.of(AvailabilityReason.PRODUCT_NOT_ON_SALE)));
     error("CANDIDATE_UNAVAILABLE", () -> service.create(1L, key, input()));
+    verify(reservations, never()).saveAndFlush(any());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"37.0000000", "37.0044966"})
+  void sameLocationAndJustInside500MetersCanReserve(String latitude) {
+    var first = stores.findById(3L).orElseThrow();
+    var store = stores.findById(4L).orElseThrow();
+    ReflectionTestUtils.setField(store, "latitude", new BigDecimal(latitude));
+    assertFalse(service.create(1L, key, input()).replay());
+    assertEquals(2, savedOrders.size());
+    var sequence = inOrder(stores, em, reservations);
+    sequence.verify(stores).findForReservation(3L);
+    sequence.verify(em).refresh(first, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    sequence.verify(stores).findForReservation(4L);
+    sequence.verify(em).refresh(store, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    sequence.verify(reservations).saveAndFlush(any());
+  }
+
+  @Test
+  void distanceThatRoundsTo500ButExceedsItDoesNotCreateReservationOrOrders() {
+    var store = stores.findById(4L).orElseThrow();
+    ReflectionTestUtils.setField(store, "latitude", new BigDecimal("37.0044967"));
+    assertEquals(
+        500L,
+        com.togethermarket.recommendation.service.StoreDistanceCalculator.straightLineMeters(
+                37.0, 127.0, 37.0044967, 127.0)
+            .orElseThrow());
+    var exception = assertThrows(ApiException.class, () -> service.create(1L, key, input()));
+    assertEquals(org.springframework.http.HttpStatus.CONFLICT, exception.status());
+    assertEquals("STORE_DISTANCE_EXCEEDED_OR_UNKNOWN", exception.code());
+    verify(reservations, never()).saveAndFlush(any());
+    verifyNoInteractions(orders, availability);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      nullValues = "NULL",
+      textBlock =
+          """
+          NULL,127,37.001,127
+          37,NULL,37.001,127
+          37,127,NULL,127
+          37,127,37.001,NULL
+          NULL,NULL,37.001,127
+          37,127,NULL,NULL
+          90.0000001,127,37.001,127
+          37,-180.0000001,37.001,127
+          37,127,-90.0000001,127
+          37,127,37.001,180.0000001
+          """)
+  void missingOrInvalidCurrentCoordinatePairsCannotReserve(
+      BigDecimal latitudeA, BigDecimal longitudeA, BigDecimal latitudeB, BigDecimal longitudeB) {
+    var a = stores.findById(3L).orElseThrow();
+    var b = stores.findById(4L).orElseThrow();
+    ReflectionTestUtils.setField(a, "latitude", latitudeA);
+    ReflectionTestUtils.setField(a, "longitude", longitudeA);
+    ReflectionTestUtils.setField(b, "latitude", latitudeB);
+    ReflectionTestUtils.setField(b, "longitude", longitudeB);
+    error("STORE_DISTANCE_EXCEEDED_OR_UNKNOWN", () -> service.create(1L, key, input()));
+    verify(reservations, never()).saveAndFlush(any());
+    verifyNoInteractions(orders, availability);
+  }
+
+  @Test
+  void refreshedStoreCoordinatesAreUsedInsteadOfEarlierManagedCoordinates() {
+    var b = stores.findById(4L).orElseThrow();
+    doAnswer(
+            invocation -> {
+              ReflectionTestUtils.setField(b, "latitude", new BigDecimal("37.0100000"));
+              return null;
+            })
+        .when(em)
+        .refresh(b, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    error("STORE_DISTANCE_EXCEEDED_OR_UNKNOWN", () -> service.create(1L, key, input()));
+    verify(reservations, never()).saveAndFlush(any());
+    verifyNoInteractions(orders);
+  }
+
+  @Test
+  void savedRetrySurvivesCoordinateChangesButANewKeyIsRevalidated() {
+    var original = service.create(1L, key, input());
+    ReflectionTestUtils.setField(stores.findById(3L).orElseThrow(), "latitude", null);
+    clearInvocations(stores, em, reservations, orders, availability);
+    var retry = service.create(1L, key, input());
+    assertTrue(retry.replay());
+    assertEquals(original.reservation().id(), retry.reservation().id());
+    verify(stores, never()).findForReservation(anyLong());
+    verifyNoInteractions(em, availability);
+    verify(reservations, never()).saveAndFlush(any());
+    verify(orders, never()).save(any());
+    error(
+        "STORE_DISTANCE_EXCEEDED_OR_UNKNOWN",
+        () -> service.create(1L, "d8d521bf-43db-4c0c-a8a1-9569eb5dbe37", input()));
+    assertEquals(2, savedOrders.size());
     verify(reservations, never()).saveAndFlush(any());
   }
 

@@ -32,7 +32,7 @@ class CustomerReadWiringTest {
     return runner.withPropertyValues(
         "recommendation.customer-read.enabled=true",
         "recommendation.customer-read.visible-sale-statuses=ON_SALE,SOLD_OUT,PAUSED",
-        "recommendation.customer-read.coordinate-policy=DETAIL_NULL_MAP_ERROR");
+        "recommendation.customer-read.coordinate-policy=DETAIL_NULL_MAP_NULL");
   }
 
   @Test
@@ -65,6 +65,13 @@ class CustomerReadWiringTest {
                       PurchaseInputException.class,
                       e -> assertThat(e.code()).isEqualTo("UNAUTHORIZED"));
             });
+  }
+
+  @Test
+  void previousCoordinatePolicySpellingRemainsAccepted() {
+    enabled()
+        .withPropertyValues("recommendation.customer-read.coordinate-policy=DETAIL_NULL_MAP_ERROR")
+        .run(c -> assertThat(c).hasNotFailed().hasSingleBean(CustomerReadService.class));
   }
 
   @Test

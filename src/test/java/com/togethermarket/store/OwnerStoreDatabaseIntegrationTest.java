@@ -47,8 +47,8 @@ class OwnerStoreDatabaseIntegrationTest {
     body.put("name", name);
     body.put("business_type", "꽃집");
     body.put("address", "용인시");
-    body.put("latitude", null);
-    body.put("longitude", null);
+    body.put("latitude", new java.math.BigDecimal("37.2758538"));
+    body.put("longitude", new java.math.BigDecimal("127.1512813"));
     body.put("phone", "031-000-0000");
     return StoreWriteRequest.parse(body, true);
   }

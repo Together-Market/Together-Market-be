@@ -12,7 +12,7 @@ Java 21과 MySQL이 필요하다. 시연 DB의 `DB_URL`, `DB_USERNAME`, `DB_PASS
 
 `GEMINI_API_KEY`가 없으면 숨김 입력으로 받는다. 키를 코드·노트북·설정 파일에 기록하지 않는다. 실행 스크립트는 종료 시 기존 환경변수를 복원한다. 기본 API 모델은 `gemini-3.5-flash-lite`이며 이 학습 가중치와 다른 `GEMINI_MODEL`을 지정하면 시작에 실패한다. 배포 환경에서는 비밀 관리 시스템으로 키를 전달한다.
 
-`demo` 프로필은 추천 HTTP, DB 저장, 비동기 작업, 고객 조회, Gemini, 시연 가중치를 함께 켠다. DB 연결·Flyway는 기존 설정을 따른다. 사용자·점포·상품을 자동 생성하지 않으므로 시연 DB에는 BCrypt 고객/점주 계정, 서로 다른 두 점포, 상품·목적 태그, BUSINESS/PICKUP 일정이 있어야 한다. 좌표가 없는 점포의 지도 조회는 409이며 좌표를 임의 생성하지 않는다.
+`demo` 프로필은 추천 HTTP, DB 저장, 비동기 작업, 고객 조회, Gemini, 시연 가중치를 함께 켠다. DB 연결·Flyway는 기존 설정을 따른다. 카탈로그 자동 입력은 기본 OFF이므로 시연 DB에는 BCrypt 고객/점주 계정, 서로 다른 두 점포, 상품·목적 태그, BUSINESS/PICKUP 일정이 있어야 한다. REC-03 좌표 누락은 HTTP 200, `distance_meters=null`, `location_status=UNAVAILABLE`이며 좌표를 임의 생성하지 않는다. [최신 주소·좌표 명세](kakao-geocoding-api.md)를 참고한다.
 
 ## 연결한 API
 
@@ -41,7 +41,7 @@ Java 21과 MySQL이 필요하다. 시연 DB의 `DB_URL`, `DB_USERNAME`, `DB_PASS
 
 - 중분류 22개의 다섯 번째 질문: 기존 purchase-reference.json 초안 문구. 일반 실행은 별도의 승인된 preference-labels 설정이 필요하다.
 - 대체 추천: 원 구매요청의 preferred_pickup_at으로 재검증한다. 기존 실패 예약에서 선택한 후보·동일 상품 조합만 제외한다. 거절 점포의 다른 상품은 일괄 제외하지 않는다.
-- 상품 상세: ON_SALE/SOLD_OUT/PAUSED 모두 조회 가능. 좌표 누락은 상세 null, 지도 409.
+- 상품 상세: ON_SALE/SOLD_OUT/PAUSED 모두 조회 가능. 좌표 누락은 상세 null, REC-03은 200과 거리 null/위치 UNAVAILABLE.
 - 예약 승인 제한시간: 시연 기본 30분, RESERVATION_APPROVAL_WINDOW로 변경. 실제 마감은 BE1 정책대로 준비 시작 가능시각과 비교해 더 이른 시각이다.
 - FE가 다른 origin이면 별도 CORS·쿠키 배포 설정이 필요하다. 현재 기본은 동일 origin이다.
 

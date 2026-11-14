@@ -5,6 +5,7 @@ import com.togethermarket.store.dto.response.*;
 import com.togethermarket.store.entity.Store;
 import com.togethermarket.store.exception.OwnerStoreException;
 import com.togethermarket.store.repository.StoreRepository;
+import com.togethermarket.store.service.geocoding.StoreCoordinatePolicy;
 import com.togethermarket.user.entity.UserRole;
 import com.togethermarket.user.repository.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -55,7 +56,7 @@ public class OwnerStoreService {
   @Transactional
   public CreatedStoreResponse create(Long ownerId, StoreWriteRequest request) {
     requireOwner(ownerId);
-    request.validateCoordinates(null);
+    var coordinates = StoreCoordinatePolicy.forWrite(request, null);
     Store store =
         stores.save(
             new Store(
@@ -63,8 +64,8 @@ public class OwnerStoreService {
                 request.name(),
                 request.businessType(),
                 request.address(),
-                request.latitude(),
-                request.longitude(),
+                coordinates.latitude(),
+                coordinates.longitude(),
                 request.phone()));
     return CreatedStoreResponse.from(store);
   }
@@ -78,13 +79,13 @@ public class OwnerStoreService {
             .findOwnedForUpdate(storeId, ownerId)
             .orElseThrow(
                 () -> new OwnerStoreException(HttpStatus.NOT_FOUND, "NOT_FOUND", "점포를 찾을 수 없습니다."));
-    request.validateCoordinates(store);
+    var coordinates = StoreCoordinatePolicy.forWrite(request, store);
     store.updateDetails(
         request.has("name") ? request.name() : store.getName(),
         request.has("business_type") ? request.businessType() : store.getBusinessType(),
         request.has("address") ? request.address() : store.getAddress(),
-        request.has("latitude") ? request.latitude() : store.getLatitude(),
-        request.has("longitude") ? request.longitude() : store.getLongitude(),
+        coordinates == null ? store.getLatitude() : coordinates.latitude(),
+        coordinates == null ? store.getLongitude() : coordinates.longitude(),
         request.has("phone") ? request.phone() : store.getPhone());
     return StoreResponse.from(store);
   }
