@@ -107,7 +107,9 @@ class OwnerOrderControllerTest {
                 .with(csrf())
                 .contentType("application/json")
                 .content("{\"rejection_reason\":\" \"}"))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("rejection_reason"))
+        .andExpect(jsonPath("$.errors[0].reason").isString());
     mvc.perform(
             post("/owner/stores/3/orders/600/reject")
                 .with(as(UserRole.OWNER))
