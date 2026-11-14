@@ -4,6 +4,8 @@ Java 21 · Spring Boot 4.1.2 · Gradle(Groovy) · MySQL 8.4 · JPA · Flyway
 
 ## 로컬 실행
 
+팀 공유 CSV 점포와 시연 상품 데이터를 설치하려면 [CSV 시연 DB 준비](docs/csv-demo-data.md)를 참고하세요. CSV 원문·상품/가격 스냅샷·입력 스크립트를 포함하며, 새 MySQL DB에서도 동일한 카탈로그를 구성할 수 있습니다.
+
 MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 환경변수로 설정합니다.
 
 ```sh
