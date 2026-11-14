@@ -20,3 +20,40 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew spotlessCheck build --no-daemon
+
+  reservation-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-test-password
+          MYSQL_DATABASE: together_market_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-test-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/together_market_test?connectionTimeZone=Asia/Seoul
+      MYSQL_TEST_USERNAME: root
+      MYSQL_TEST_PASSWORD: ci-test-password
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test --tests '*ReservationDatabaseIntegrationTest' --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reservation-mysql-tests
+          path: |
+            build/test-results/test
+            build/reports/tests/test

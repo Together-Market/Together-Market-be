@@ -123,4 +123,8 @@ public class StoreOrder {
   public String getRejectionReason() {
     return rejectionReason;
   }
+
+  public void expireIfPending() {
+    if (approvalStatus == ApprovalStatus.PENDING) approvalStatus = ApprovalStatus.EXPIRED;
+  }
 }
