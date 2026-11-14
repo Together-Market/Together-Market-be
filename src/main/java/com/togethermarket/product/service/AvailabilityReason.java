@@ -1,0 +1,11 @@
+package com.togethermarket.product.service;
+
+public enum AvailabilityReason {
+  PRODUCT_NOT_FOUND,
+  STORE_NOT_FOUND,
+  PRODUCT_NOT_ON_SALE,
+  PICKUP_NOT_IN_FUTURE,
+  PREPARATION_TIME_INSUFFICIENT,
+  OUTSIDE_BUSINESS_HOURS,
+  OUTSIDE_PICKUP_HOURS
+}

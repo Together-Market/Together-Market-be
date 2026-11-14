@@ -1,0 +1,40 @@
+{
+  "artifact_version": 1,
+  "mode": "ai_synthetic_experiment",
+  "deployable": false,
+  "ranker_version": "gemini-ai-demo-20261114T104304Z",
+  "api_provider": "gemini",
+  "api_model": "gemini-3.5-flash-lite",
+  "prompt_version": "6c585742a777a59ea40ce12eee517e0c939c231d4ce4f501cce519c8302548f2",
+  "feature_version": "together-ranker-v1",
+  "feature_names": [
+    "purpose",
+    "taste",
+    "recipient",
+    "complement",
+    "proximity",
+    "budget_remaining"
+  ],
+  "weights": [
+    2.8080075005669327,
+    0.05973416675235086,
+    2.2240070151193243,
+    1.343163256738497,
+    0.0,
+    0.6677374311895806
+  ],
+  "label_source": "ai_synthetic",
+  "evaluation_source": "live_api",
+  "training_comparisons": 57,
+  "training_scenarios": 23,
+  "sklearn_version": "1.6.1",
+  "dataset_hash": "453f668b816c2cc4dbf6a11a695c59c6c1d3e3c1cc28931834f107e3c277854a",
+  "limitations": [
+    "Preference ranks are frozen AI annotations, not human preferences.",
+    "Semantic features are actual Gemini API outputs; no LLM fine-tuning is performed.",
+    "Agreement with AI labels does not establish customer satisfaction or production quality.",
+    "Synthetic catalog; scenario groups are disjoint but products are shared across splits.",
+    "Missing coordinates produce zero proximity; distance preferences cannot be learned.",
+    "Ineligible Gemini results are excluded; evaluation counts may differ from the earlier experiment."
+  ]
+}
