@@ -33,3 +33,7 @@
 `./gradlew build spotlessCheck`
 
 DB 없이 MockMvc + 실제 Security 필터로 세션 로그인, 세션 ID 교체, CSRF 갱신/누락/구 토큰 거부, 로그아웃, 잘못된 입력·비밀번호, 고객의 점포 접근 거부, 점주의 기존 점포 API 연결을 확인합니다. 실제 MySQL 검증은 기존 `MYSQL_TEST_URL` 등 환경변수를 설정해야 실행됩니다.
+
+## 공통 오류 응답 보완
+
+필드 오류는 기존 BE2·BE3와 동일하게 `{field, reason}`을 사용합니다. field는 Jackson의 실제 JSON 이름을 따르며 `customer_name`, `pickups[0].requested_pickup_at`처럼 중첩 경로와 배열 위치를 보존합니다. HTTP 405는 METHOD_NOT_ALLOWED, 415는 UNSUPPORTED_MEDIA_TYPE과 공통 오류 본문을 반환하며 Allow 등 표준 헤더를 유지합니다.
