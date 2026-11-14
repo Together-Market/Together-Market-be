@@ -1,14 +1,17 @@
 package com.togethermarket.recommendation.controller;
 
 import com.togethermarket.global.api.ApiResponse;
+import com.togethermarket.global.auth.LoginUser;
 import com.togethermarket.recommendation.dto.request.CreatePurchaseRequest;
 import com.togethermarket.recommendation.dto.response.*;
 import com.togethermarket.recommendation.service.customer.CustomerReadAccess;
 import com.togethermarket.recommendation.service.persistence.JpaPurchaseCreationService;
 import com.togethermarket.recommendation.service.purchase.*;
+import com.togethermarket.user.entity.UserRole;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,8 +37,12 @@ public class PurchaseController {
   }
 
   @GetMapping("/purpose-categories")
-  public ApiResponse<PurposeCategoriesResponse> categories(HttpServletRequest request) {
-    access.requireCustomer(request);
+  public ApiResponse<PurposeCategoriesResponse> categories(
+      @AuthenticationPrincipal LoginUser user) {
+    if (user == null)
+      throw new PurchaseInputException("UNAUTHORIZED", "로그인이 필요합니다.", java.util.List.of());
+    if (user.role() != UserRole.CUSTOMER && user.role() != UserRole.OWNER)
+      throw new PurchaseInputException("FORBIDDEN", "접근 권한이 없습니다.", java.util.List.of());
     return new ApiResponse<>(categories.categories());
   }
 

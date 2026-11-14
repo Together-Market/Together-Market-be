@@ -424,6 +424,9 @@ class DemoWorkflowDatabaseIntegrationTest {
     mvc.perform(get("/purpose-categories")).andExpect(status().isUnauthorized());
     var owner = login(ownerEmailA);
     mvc.perform(get("/purpose-categories").session(owner.session()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items").isArray());
+    mvc.perform(get("/purpose-categories/11/questions").session(owner.session()))
         .andExpect(status().isForbidden());
     var customerLogin = login(email);
     mvc.perform(
