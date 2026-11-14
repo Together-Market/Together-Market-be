@@ -57,3 +57,5 @@ URL은 /api/v1 접두사 없이 기존 명세의 경로를 사용합니다. JSON
 구매요청은 202 Accepted, 상태는 RECOMMENDING/READY/FAILED입니다. 후보 없음은 READY와 빈 목록, 시스템 실패는 FAILED와 failure_code로 구분합니다. 구매요청에는 별도 Idempotency-Key를 적용하지 않습니다.
 
 상품 이미지는 image_url로 등록·수정하며 업로드 API는 이번 범위에 없습니다. 상품 삭제·점포 탈퇴는 제외하고 판매 중지는 PAUSED로 처리합니다.
+
+CSV 시연 데이터는 기본 `local` 또는 `demo` 프로필로 서버를 시작하면 연결된 DB에 자동 입력됩니다. 먼저 시연 전용 DB의 접속 정보를 설정하세요. 재시작 시 기존 데이터는 유지됩니다. 자세한 설정과 자동 입력 비활성화 방법은 [CSV 시연 데이터 안내](docs/csv-demo-data.md)를 참고하세요.
