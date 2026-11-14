@@ -25,8 +25,29 @@ public final class RecommendationInput {
       String description,
       String business_type,
       long price_amount,
-      boolean is_available) {
+      boolean is_available,
+      @com.fasterxml.jackson.annotation.JsonIgnore String store_identity) {
+    public Product(
+        String id,
+        String store_id,
+        String name,
+        String description,
+        String business_type,
+        long price_amount,
+        boolean is_available) {
+      this(
+          id,
+          store_id,
+          name,
+          description,
+          business_type,
+          price_amount,
+          is_available,
+          "id:" + store_id);
+    }
+
     public Product {
+      java.util.Objects.requireNonNull(store_identity);
       if (id == null
           || id.isBlank()
           || store_id == null
@@ -54,6 +75,7 @@ public final class RecommendationInput {
           || products.size() != 2
           || products.get(0).id().equals(products.get(1).id())
           || products.get(0).store_id().equals(products.get(1).store_id())
+          || products.get(0).store_identity().equals(products.get(1).store_identity())
           || (distance_meters != null
               && (!Double.isFinite(distance_meters) || distance_meters < 0))) {
         throw new IllegalArgumentException("Invalid two-store candidate");

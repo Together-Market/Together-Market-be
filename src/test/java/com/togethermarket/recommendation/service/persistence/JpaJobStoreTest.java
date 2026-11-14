@@ -28,7 +28,8 @@ class JpaJobStoreTest {
           items,
           clock,
           mock(com.togethermarket.product.repository.ProductRepository.class),
-          mock(com.togethermarket.product.service.ProductAvailabilityService.class));
+          mock(com.togethermarket.product.service.ProductAvailabilityService.class),
+          mock(com.togethermarket.store.repository.StoreRepository.class));
   final PurchaseRequest row =
       identified(
           new PurchaseRequest(

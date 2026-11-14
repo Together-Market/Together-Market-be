@@ -23,7 +23,8 @@ final class CandidateFixtures implements RecommendationReadSource, CatalogSource
   int sourceReads;
 
   static Product product(long id, long storeId, long price) {
-    return new Product(id, storeId, "상품 " + id, null, "디저트", price, Set.of(11L), 37.2, 127.1);
+    return new Product(
+        id, storeId, "상품 " + id, null, "디저트", price, Set.of(11L), 37.32117, 127.11011);
   }
 
   static SavedCandidate saved(long id, int rank, long a, long b) {
