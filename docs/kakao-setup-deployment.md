@@ -98,7 +98,7 @@ bootRun --args="--spring.profiles.active=demo --demo.catalog.enabled=false --res
 
 로컬 프런트와 배포 백엔드는 서로 다른 사이트이므로 직접 호출하는 배포 구성에는 `SameSite=None; Secure`가 필요하다. 이 두 속성은 **HTTPS 배포 백엔드**에 설정한다. 브라우저의 서드파티 쿠키 차단은 CORS와 별개로 세션을 막을 수 있어 실제 프런트에서 로그인 유지 검증이 필요하다. Postman 성공만으로 브라우저 연결 완료로 판단하지 않는다. [쿠키 속성](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie), [CORS와 서드파티 쿠키](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS).
 
-브라우저 정책으로 직접 연결이 막히면 프런트 개발 서버에서 배포 백엔드로 프록시하는 구성을 팀원과 맞춘다. 이 경우에도 프런트 배포는 필요 없지만 프록시의 Origin 처리·쿠키 전달·속성을 함께 검증해야 한다. Vite를 사용한다면 [공식 server.proxy 안내](https://vite.dev/config/server-options.html#server-proxy)를 참고한다. 현재 프런트 소스는 수정하지 않았다. JavaScript 키 도메인 등록은 CORS/세션 설정을 대신하지 않는다. 서버가 여러 대면 현재 메모리 기반 세션을 어떻게 공유할지도 결정해야 한다.
+브라우저 정책으로 직접 연결이 막히면 프런트 개발 서버에서 배포 백엔드로 프록시하는 구성을 팀원과 맞춘다. 이 경우에도 프런트 배포는 필요 없지만 프록시의 Origin 처리·쿠키 전달·속성을 함께 검증해야 한다. Vite를 사용한다면 [공식 server.proxy 안내](https://vite.dev/config/server-options.html#server-proxy)를 참고한다. 현재 프런트 소스는 수정하지 않았다. JavaScript 키 도메인 등록은 CORS/세션 설정을 대신하지 않는다. 배포용 `cloudsql` 프로필은 [DB 세션](jdbc-session-deployment.md)을 사용하며 로컬 `demo`는 메모리 세션을 사용한다.
 
 MySQL도 배포 백엔드가 접근할 수 있는 위치를 정해야 한다. 배포 서버의 `localhost`는 사용자 PC가 아니라 **배포 서버 자신**을 뜻한다. 클라우드 DB 또는 백엔드와 같은 서버의 MySQL 등 실제 구조가 정해진 뒤 `DB_URL`을 입력한다. 기존 로컬 DB의 백업을 별도 배포 DB로 복원하는 작업은 사용자가 직접 수행한다. 현재 598개 점포와 상품·태그·일정, Flyway 이력을 함께 보존하고 복원 후 수를 비교한다. 원본 DB에 복원 덤프를 다시 실행하지 않는다.
 

@@ -10,7 +10,7 @@ Java 21 · Spring Boot 4.1.2 · Gradle(Groovy) · MySQL 8.4 · JPA · Flyway
 
 백엔드 우선 배포 준비: [점검·보안 검토 결과](docs/predeployment-review.md), [사용자 커밋·푸시·PR 순서](docs/git-release-guide.md). 최종 신규 예약도 현재 좌표로 직선거리 500m 조건을 검사합니다.
 
-Google Cloud 배포 준비 1단계: [Java 21 컨테이너 빌드 안내](docs/cloud-run-container.md). 먼저 Gradle로 검증한 실행 JAR을 만들고 Docker 이미지에 포장합니다. Cloud SQL 연결·DB 세션·백그라운드 작업 설정은 후속 단계입니다.
+Google Cloud 배포 준비: [1단계 컨테이너](docs/cloud-run-container.md), [2단계 Cloud SQL](docs/cloud-sql-setup.md), [3단계 DB 세션](docs/jdbc-session-deployment.md), [4단계 백그라운드 실행](docs/cloud-run-background.md). 실제 Cloud SQL 연결과 Cloud Run 배포는 별도입니다.
 
 2단계 [Cloud SQL 연결 준비](docs/cloud-sql-setup.md): `cloudsql` 프로필을 명시할 때만 Google Java Connector를 사용합니다. 해커톤 배포는 `demo,cloudsql`, 기존 로컬 실행은 `demo`를 유지합니다. 실제 Cloud SQL 접속·데이터 복원·세션 저장·배포 검증은 별도입니다.
 
