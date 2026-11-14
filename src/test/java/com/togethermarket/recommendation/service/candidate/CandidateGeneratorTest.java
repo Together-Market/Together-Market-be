@@ -82,7 +82,8 @@ class CandidateGeneratorTest {
     data.products.put(1L, product(1, 1, 1000));
     data.products.put(2L, product(2, 2, 1000));
     data.products.put(3L, product(3, 2, 1000));
-    data.products.put(4L, new Product(4L, 3L, "꽃", null, "꽃집", 1000, Set.of(), null, null));
+    data.products.put(
+        4L, new Product(4L, 3L, "꽃", null, "꽃집", 1000, Set.of(), 37.32117, 127.11011));
     var subject =
         new CandidateGenerator(
             data,
@@ -91,16 +92,18 @@ class CandidateGeneratorTest {
     var result = subject.generate(data.purchase, data.products.keySet(), preferences, NOW);
     assertThat(result)
         .extracting(RecommendationInput.Candidate::candidate_id)
-        .containsExactly("p_1_2", "p_1_4");
-    assertThat(result.getLast().distance_meters()).isNull();
+        .containsExactly("p_1_2", "p_3_4");
+    assertThat(result.getLast().distance_meters()).isZero();
   }
 
   @Test
   void purposeTagsAndTrustedPreferenceAffectPreselectionWithoutInventingMetadata() {
     data.products.clear();
-    data.products.put(1L, new Product(1L, 1L, "A", null, "꽃", 1000, Set.of(), null, null));
-    data.products.put(2L, new Product(2L, 2L, "B", null, "꽃", 1000, Set.of(12L), null, null));
-    data.products.put(3L, new Product(3L, 3L, "C", null, "꽃", 1000, Set.of(11L), null, null));
+    data.products.put(1L, new Product(1L, 1L, "A", null, "꽃", 1000, Set.of(), 37.32117, 127.11011));
+    data.products.put(
+        2L, new Product(2L, 2L, "B", null, "꽃", 1000, Set.of(12L), 37.32117, 127.11011));
+    data.products.put(
+        3L, new Product(3L, 3L, "C", null, "꽃", 1000, Set.of(11L), 37.32117, 127.11011));
     var subject =
         new CandidateGenerator(
             data,
@@ -117,7 +120,7 @@ class CandidateGeneratorTest {
         subject.generate(data.purchase, data.products.keySet(), preference, NOW).getFirst();
     assertThat(result.candidate_id()).isEqualTo("p_1_3");
     assertThat(result.products().getFirst().description()).isEmpty();
-    assertThat(result.distance_meters()).isNull();
+    assertThat(result.distance_meters()).isZero();
   }
 
   @Test
@@ -130,10 +133,9 @@ class CandidateGeneratorTest {
             data,
             (id, pickup, now) -> ProductEligibility.Result.available(),
             new Limits(2, 1, 1, 1500));
-    assertThatThrownBy(
-            () -> small.generate(data.purchase, data.products.keySet(), preferences, NOW))
-        .isInstanceOf(IllegalArgumentException.class);
     assertThat(data.catalogReads).isZero();
+    assertThat(small.generate(data.purchase, data.products.keySet(), preferences, NOW)).hasSize(1);
+    assertThat(data.catalogReads).isEqualTo(2);
   }
 
   @Test

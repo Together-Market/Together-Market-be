@@ -9,7 +9,9 @@ public record RankingModel(String mode, String version, List<Double> weights) {
       List.of("purpose", "taste", "recipient", "complement", "proximity", "budget_remaining");
 
   public RankingModel {
-    if (!List.of("baseline", "trained").contains(mode) || version == null || version.isBlank()) {
+    if (!List.of("baseline", "trained", "demo").contains(mode)
+        || version == null
+        || version.isBlank()) {
       throw new IllegalArgumentException("Invalid ranking model metadata");
     }
     weights = List.copyOf(weights);

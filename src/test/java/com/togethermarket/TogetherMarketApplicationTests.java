@@ -31,6 +31,9 @@ class TogetherMarketApplicationTests {
   @MockitoBean com.togethermarket.product.repository.ProductPurposeTagRepository tags;
   @MockitoBean com.togethermarket.recommendation.repository.PurposeCategoryRepository categories;
 
+  @MockitoBean com.togethermarket.store.repository.PublicStoreRecordRepository publicRecords;
+  @MockitoBean org.springframework.jdbc.core.JdbcTemplate jdbc;
+
   @Test
   void contextLoads() {}
 }

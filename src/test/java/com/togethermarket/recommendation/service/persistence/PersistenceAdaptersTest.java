@@ -78,8 +78,26 @@ class PersistenceAdaptersTest {
     when(stores.findAllById(Set.of(10L, 20L)))
         .thenReturn(
             List.of(
-                identified(new Store(7L, "꽃집", "꽃", "주소", null, null, "010"), 10),
-                identified(new Store(8L, "제과", "디저트", "주소", null, null, "010"), 20)));
+                identified(
+                    new Store(
+                        7L,
+                        "꽃집",
+                        "꽃",
+                        "주소",
+                        new BigDecimal("37.32117"),
+                        new BigDecimal("127.11011"),
+                        "010"),
+                    10),
+                identified(
+                    new Store(
+                        8L,
+                        "제과",
+                        "디저트",
+                        "주소",
+                        new BigDecimal("37.32117"),
+                        new BigDecimal("127.11011"),
+                        "010"),
+                    20)));
     when(tags.findByIdProductIdIn(Set.of(1L, 2L)))
         .thenReturn(List.of(new ProductPurposeTag(1L, 11L)));
     var source = new JpaCatalogSource(products, stores, tags);

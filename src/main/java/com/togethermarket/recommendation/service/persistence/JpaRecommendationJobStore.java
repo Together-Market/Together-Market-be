@@ -6,7 +6,11 @@ import com.togethermarket.product.service.ProductAvailabilityService;
 import com.togethermarket.recommendation.entity.*;
 import com.togethermarket.recommendation.repository.*;
 import com.togethermarket.recommendation.service.HybridRecommendationService.RankedCandidate;
+import com.togethermarket.recommendation.service.candidate.RecommendationArea;
+import com.togethermarket.recommendation.service.candidate.StorePairDistance;
 import com.togethermarket.recommendation.service.job.*;
+import com.togethermarket.store.entity.Store;
+import com.togethermarket.store.repository.StoreRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,6 +33,7 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
   private final Clock clock;
   private final ProductRepository products;
   private final ProductAvailabilityService availability;
+  private final StoreRepository stores;
 
   public JpaRecommendationJobStore(
       PurchaseRequestRepository purchases,
@@ -36,13 +41,15 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       RecommendationItemRepository items,
       Clock clock,
       ProductRepository products,
-      ProductAvailabilityService availability) {
+      ProductAvailabilityService availability,
+      StoreRepository stores) {
     this.purchases = purchases;
     this.candidates = candidates;
     this.items = items;
     this.clock = clock;
     this.products = products;
     this.availability = availability;
+    this.stores = stores;
   }
 
   @Override
@@ -83,6 +90,26 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       products.findAllById(productIds).forEach(p -> current.put(p.getId(), p));
     if (!current.keySet().equals(productIds))
       throw new IllegalStateException("Recommendation product disappeared before persistence");
+    var areas = new HashMap<Long, RecommendationArea>();
+    var identities = new HashMap<Long, String>();
+    var currentStores = new HashMap<Long, Store>();
+    if (!current.isEmpty()) {
+      stores
+          .findAllById(current.values().stream().map(Product::getStoreId).distinct().toList())
+          .forEach(
+              s -> {
+                currentStores.put(s.getId(), s);
+                identities.put(
+                    s.getId(),
+                    com.togethermarket.recommendation.service.candidate.StoreIdentity.key(
+                        s.getId(), s.getName(), s.getAddress()));
+                areas.put(
+                    s.getId(),
+                    RecommendationArea.locate(
+                        s.getLatitude() == null ? null : s.getLatitude().doubleValue(),
+                        s.getLongitude() == null ? null : s.getLongitude().doubleValue()));
+              });
+    }
     var eligible = new HashMap<Long, Boolean>();
     var checkedAt = clock.instant();
     var pickupAt = KoreanDateTime.toInstant(row.getPreferredPickupAt());
@@ -92,7 +119,13 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       var first = current.get(Long.valueOf(pair.get(0).id()));
       var second = current.get(Long.valueOf(pair.get(1).id()));
       var total = first.getPriceAmount().add(second.getPriceAmount());
-      if (first.getStoreId().equals(second.getStoreId())
+      if (areas.get(first.getStoreId()) == null
+          || !withinStoreDistance(
+              currentStores.get(first.getStoreId()), currentStores.get(second.getStoreId()))
+          || areas.get(first.getStoreId()) != areas.get(second.getStoreId())
+          || first.getStoreId().equals(second.getStoreId())
+          || java.util.Objects.equals(
+              identities.get(first.getStoreId()), identities.get(second.getStoreId()))
           || !first.getStoreId().toString().equals(pair.get(0).store_id())
           || !second.getStoreId().toString().equals(pair.get(1).store_id())
           || total.compareTo(row.getBudgetAmount()) > 0
@@ -153,6 +186,15 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       }
     }
     return count;
+  }
+
+  private static boolean withinStoreDistance(Store first, Store second) {
+    if (first == null || second == null) return false;
+    return StorePairDistance.allows(
+        first.getLatitude() == null ? null : first.getLatitude().doubleValue(),
+        first.getLongitude() == null ? null : first.getLongitude().doubleValue(),
+        second.getLatitude() == null ? null : second.getLatitude().doubleValue(),
+        second.getLongitude() == null ? null : second.getLongitude().doubleValue());
   }
 
   private PurchaseRequest owned(Lease lease) {

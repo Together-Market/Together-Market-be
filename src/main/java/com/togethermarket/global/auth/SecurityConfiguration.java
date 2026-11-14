@@ -43,6 +43,9 @@ public class SecurityConfiguration {
   }
 
   @Bean
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication(
+      type =
+          org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.SERVLET)
   SecurityFilterChain securityFilterChain(
       HttpSecurity http, SecurityContextRepository contexts, CsrfTokenRepository tokens)
       throws Exception {

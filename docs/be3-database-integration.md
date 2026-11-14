@@ -55,7 +55,7 @@ recommendation.persistence.enabled=true
 ```properties
 recommendation.execution.enabled=true
 recommendation.ai.enabled=true
-recommendation.max-products=200
+recommendation.catalog-batch-size=500
 # 승인된 질문 문구를 실제 분류 ID별로 제공한다. 아래 한 줄은 설정 형태 예시다.
 recommendation.questions.preference-labels.11=선호하는 상품 종류를 알려주세요.
 ```
@@ -64,7 +64,7 @@ OPENAI_API_KEY/OPENAI_MODEL은 기존 AI 설정대로 환경변수로 제공한�
 
 실행 설정은 worker 2개·대기열 32개·전체 40초·복구 1초·배치 100건을 사용한다. `recommendation.execution.enabled`는 요청 전달뿐 아니라 기존 RECOMMENDING 만료 복구도 시작하므로, DB 연결·질문·AI 설정과 팀 적용 범위를 확인한 환경에서 켠다.
 
-현재 DB 사전 조회는 ON_SALE·예산 이하 상품을 ID 순으로 최대 200개 가져온다. 이후 공통 시간 검증과 목적 태그·거리·조합 다양성으로 최대 12개를 선택한다. 이 제한은 작은 시연 카탈로그를 위한 구현이며 규모가 커지면 상권·카테고리·위치 조건과 사전 조회 정렬을 개선해야 한다. 텍스트 선호의 별도 사전 점수는 아직 만들지 않고, 원문 답변을 기존 AI 평가기에 전달한다.
+현재 DB 사전 조회는 ON_SALE·예산 이하 상품 전체를 커서로 순회한다. 500은 배치 크기이며 총 상품 상한이 아니다. [보정동/동백 구역 규칙](yongin-demo-areas.md)에 따라 동일 구역의 두 점포 조합만 후보 생성·저장·재검증을 통과한다. AI 입력 최대 12개 및 최종 저장 최대 6개는 유지한다. ProductAvailabilityService.checkAll은 기존 단건 check와 동일한 영업·수령·준비시간 판정을 배치 조회에 재사용하며, 기존 단건 호출 계약은 유지한다. 저장된 텍스트 선호·제외 답변은 알려진 상품 종류 해석으로 사전 선별에 반영하고, 원문 답변은 AI 평가기에도 전달한다. 세부 기준은 [추천 품질 개선](recommendation-quality-demo.md)을 따른다.
 
 ## 검증과 남은 작업
 
