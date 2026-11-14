@@ -7,6 +7,7 @@ import com.togethermarket.recommendation.repository.*;
 import com.togethermarket.recommendation.service.RecommendationInput.Context;
 import com.togethermarket.recommendation.service.candidate.CandidateData.Purchase;
 import com.togethermarket.recommendation.service.candidate.CandidateGenerator.Preferences;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,20 +20,20 @@ public class JpaRecommendationInputSource {
   private final PurposeCategoryRepository categories;
   private final ProductRepository products;
   private final PurchaseAnswerCodec answers;
-  private final int productLimit;
+  private final int catalogBatchSize;
 
   public JpaRecommendationInputSource(
       PurchaseRequestRepository purchases,
       PurposeCategoryRepository categories,
       ProductRepository products,
       PurchaseAnswerCodec answers,
-      int productLimit) {
-    if (productLimit < 2) throw new IllegalArgumentException("At least two products required");
+      int catalogBatchSize) {
+    if (catalogBatchSize < 2) throw new IllegalArgumentException("At least two products required");
     this.purchases = purchases;
     this.categories = categories;
     this.products = products;
     this.answers = answers;
-    this.productLimit = productLimit;
+    this.catalogBatchSize = catalogBatchSize;
   }
 
   public record Input(
@@ -70,6 +71,24 @@ public class JpaRecommendationInputSource {
     var values =
         answers.decode(p.getAnswers()).stream()
             .collect(Collectors.toMap(a -> a.questionCode(), a -> a.value()));
+    // A fixed upper ID keeps concurrent inserts from extending this scan indefinitely.
+    long upper = products.recommendationHighWaterId();
+    long after = 0;
+    var ids = new ArrayList<Long>();
+    while (after < upper) {
+      var batch =
+          products.findRecommendationProductBatch(
+              SaleStatus.ON_SALE,
+              p.getBudgetAmount(),
+              after,
+              upper,
+              PageRequest.of(0, catalogBatchSize));
+      if (batch.isEmpty()) break;
+      ids.addAll(batch);
+      long next = batch.getLast();
+      if (next <= after) throw new IllegalStateException("Catalog cursor did not advance");
+      after = next;
+    }
     return new Input(
         new Purchase(
             p.getId(),
@@ -79,8 +98,11 @@ public class JpaRecommendationInputSource {
             p.getStatus().name()),
         new Context(
             category.getName(), p.getBudgetAmount().longValueExact(), pickup.toString(), values),
-        new Preferences(category.getId(), siblings, Map.of()),
-        products.findRecommendationProductIds(
-            SaleStatus.ON_SALE, p.getBudgetAmount(), PageRequest.of(0, productLimit)));
+        new Preferences(
+            category.getId(),
+            siblings,
+            Map.of(),
+            com.togethermarket.recommendation.service.candidate.PreferenceSignals.from(values)),
+        ids);
   }
 }

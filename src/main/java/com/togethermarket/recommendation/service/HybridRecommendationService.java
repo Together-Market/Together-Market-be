@@ -77,7 +77,19 @@ public final class HybridRecommendationService {
       throw new IllegalArgumentException("AI omitted a candidate");
     }
     var selected = new ArrayList<RankedCandidate>();
+    var productUses = new HashMap<String, Integer>();
+    var storeUses = new HashMap<String, Integer>();
+    var nameUses = new HashMap<List<String>, Integer>();
     while (!remaining.isEmpty() && selected.size() < 6) {
+      remaining.removeIf(
+          c ->
+              c.candidate().products().stream()
+                      .anyMatch(
+                          p ->
+                              productUses.getOrDefault(p.id(), 0) >= 2
+                                  || storeUses.getOrDefault(p.store_identity(), 0) >= 2)
+                  || nameUses.getOrDefault(names(c), 0) >= 2);
+      if (remaining.isEmpty()) break;
       var best =
           remaining.stream()
               .min(
@@ -85,6 +97,14 @@ public final class HybridRecommendationService {
                       .thenComparing(c -> c.candidate().candidate_id()))
               .orElseThrow();
       selected.add(best);
+      best.candidate()
+          .products()
+          .forEach(
+              p -> {
+                productUses.merge(p.id(), 1, Integer::sum);
+                storeUses.merge(p.store_identity(), 1, Integer::sum);
+              });
+      nameUses.merge(names(best), 1, Integer::sum);
       remaining.remove(best);
     }
     return List.copyOf(selected);
@@ -104,12 +124,19 @@ public final class HybridRecommendationService {
         1 - (double) candidate.totalAmount() / context.budget_amount());
   }
 
+  private static List<String> names(RankedCandidate candidate) {
+    return com.togethermarket.recommendation.service.candidate.CombinationDiversity.names(
+        candidate.candidate().products().stream().map(p -> p.name()).toList());
+  }
+
   private static double adjusted(RankedCandidate candidate, List<RankedCandidate> selected) {
     int sharedProducts = 0;
     int sharedStores = 0;
+    int sharedNames = 0;
     for (RankedCandidate previous : selected) {
       var products = previous.candidate().products().stream().map(p -> p.id()).toList();
-      var stores = previous.candidate().products().stream().map(p -> p.store_id()).toList();
+      var stores = previous.candidate().products().stream().map(p -> p.store_identity()).toList();
+      if (names(candidate).equals(names(previous))) sharedNames++;
       sharedProducts =
           Math.max(
               sharedProducts,
@@ -122,9 +149,9 @@ public final class HybridRecommendationService {
               sharedStores,
               (int)
                   candidate.candidate().products().stream()
-                      .filter(p -> stores.contains(p.store_id()))
+                      .filter(p -> stores.contains(p.store_identity()))
                       .count());
     }
-    return candidate.score() - 15 * sharedProducts - 5 * sharedStores;
+    return candidate.score() - 15 * sharedProducts - 5 * sharedStores - 15 * sharedNames;
   }
 }

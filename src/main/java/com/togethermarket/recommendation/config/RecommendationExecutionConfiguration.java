@@ -30,9 +30,16 @@ public class RecommendationExecutionConfiguration {
             .bind(
                 "recommendation.questions.preference-labels",
                 Bindable.mapOf(Long.class, String.class))
-            .orElseThrow(
-                () ->
-                    new IllegalStateException("Approved preference question labels are required"));
+            .orElseGet(
+                () -> {
+                  if (env.acceptsProfiles(org.springframework.core.env.Profiles.of("demo"))
+                      && env.getProperty(
+                          "recommendation.questions.use-demo-draft", Boolean.class, false)) {
+                    return PurposeReferenceData.loadDraft().categoryPreferenceLabels();
+                  }
+                  throw new IllegalStateException(
+                      "Approved preference question labels are required");
+                });
     return new PurposeQuestionService(categories, labels);
   }
 
@@ -49,7 +56,7 @@ public class RecommendationExecutionConfiguration {
         catalog,
         eligibility,
         new CandidateGenerator.Limits(
-            env.getProperty("recommendation.max-products", Integer.class, 200), 12, 8, 1500));
+            env.getProperty("recommendation.catalog-batch-size", Integer.class, 500), 12, 8, 1500));
   }
 
   @Bean
@@ -64,7 +71,7 @@ public class RecommendationExecutionConfiguration {
         categories,
         products,
         codec,
-        env.getProperty("recommendation.max-products", Integer.class, 200));
+        env.getProperty("recommendation.catalog-batch-size", Integer.class, 500));
   }
 
   @Bean

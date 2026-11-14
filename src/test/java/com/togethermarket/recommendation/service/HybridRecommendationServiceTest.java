@@ -15,11 +15,53 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class HybridRecommendationServiceTest {
+  @Test
+  void hardCapsStopRepeatedProductMerchantAndTemplateAcrossDifferentIds() {
+    var input = new java.util.ArrayList<Candidate>();
+    for (int i = 1; i <= 8; i++) {
+      input.add(
+          new Candidate(
+              "c" + i,
+              List.of(
+                  new Product("a" + i, "sa" + i, "케이크", "", "제과", 1000, true, "same-merchant"),
+                  new Product("b" + i, "sb" + i, "쿠키", "", "제과", 1000, true)),
+              0.,
+              true));
+    }
+    var service =
+        new HybridRecommendationService(
+            (ctx, candidates) -> candidates.stream().map(c -> evaluation(c, "ALLOWED")).toList(),
+            RankingModel.baseline());
+    assertThat(service.recommend(context, input)).hasSize(2);
+    var differentMerchants =
+        input.stream()
+            .map(
+                c ->
+                    new Candidate(
+                        c.candidate_id(),
+                        c.products().stream()
+                            .map(
+                                p ->
+                                    new Product(
+                                        p.id(),
+                                        p.store_id(),
+                                        p.name(),
+                                        p.description(),
+                                        p.business_type(),
+                                        p.price_amount(),
+                                        true))
+                            .toList(),
+                        0.,
+                        true))
+            .toList();
+    assertThat(service.recommend(context, differentMerchants)).hasSize(2);
+  }
+
   private final Context context =
       new Context("생일", 60000, "2026-11-15T18:00:00+09:00", Map.of("style", "아기자기함"));
 
   private Product product(String id, String store, long price, boolean available) {
-    return new Product(id, store, "시연 상품", "검수한 시연 설명", "시연 업종", price, available);
+    return new Product(id, store, "시연 상품 " + id, "검수한 시연 설명", "시연 업종", price, available);
   }
 
   private Candidate candidate(String id, String a, String b) {

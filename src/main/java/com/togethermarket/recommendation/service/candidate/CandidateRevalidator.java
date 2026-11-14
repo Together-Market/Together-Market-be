@@ -49,11 +49,18 @@ public final class CandidateRevalidator {
       var reasons = new LinkedHashSet<UnavailableReason>();
       var items = new ArrayList<CurrentItem>();
       var stores = new HashSet<Long>();
+      var identities = new HashSet<String>();
       long total = 0;
+      var areas = new HashSet<RecommendationArea>();
       for (var item : candidate.items()) {
         Product product = products.get(item.productId());
         items.add(new CurrentItem(item, product));
         stores.add(product.storeId());
+        identities.add(product.storeIdentity());
+        var area = RecommendationArea.of(product);
+        if (area == null)
+          reasons.add(new UnavailableReason(product.id(), "OUTSIDE_RECOMMENDATION_AREA"));
+        else areas.add(area);
         total = Math.addExact(total, Math.multiplyExact(product.priceAmount(), item.quantity()));
         var check =
             checks.computeIfAbsent(
@@ -64,6 +71,10 @@ public final class CandidateRevalidator {
         for (String code : check.reasonCodes())
           reasons.add(new UnavailableReason(product.id(), code));
       }
+      if (areas.size() > 1)
+        reasons.add(new UnavailableReason(null, "DIFFERENT_RECOMMENDATION_AREAS"));
+      if (stores.size() == 2 && identities.size() != 2)
+        reasons.add(new UnavailableReason(null, "DUPLICATE_STORE_IDENTITY"));
       if (stores.size() != 2) reasons.add(new UnavailableReason(null, "DISTINCT_STORES_REQUIRED"));
       if (total > purchase.budgetAmount())
         reasons.add(new UnavailableReason(null, "BUDGET_EXCEEDED"));

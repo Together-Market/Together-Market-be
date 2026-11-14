@@ -57,7 +57,9 @@ public class JpaCatalogSource implements CatalogSource {
               p.getPriceAmount().longValueExact(),
               byProduct.getOrDefault(p.getId(), Set.of()),
               s.getLatitude() == null ? null : s.getLatitude().doubleValue(),
-              s.getLongitude() == null ? null : s.getLongitude().doubleValue()));
+              s.getLongitude() == null ? null : s.getLongitude().doubleValue(),
+              com.togethermarket.recommendation.service.candidate.StoreIdentity.key(
+                  s.getId(), s.getName(), s.getAddress())));
     }
     return Map.copyOf(result);
   }
