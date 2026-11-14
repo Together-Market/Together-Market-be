@@ -53,6 +53,8 @@ MySQL에 together_market DB를 생성하고 DB_URL, DB_USERNAME, DB_PASSWORD를 
 
 ## API 합의
 
+`GET /purpose-categories`는 로그인한 CUSTOMER와 OWNER 모두 조회할 수 있습니다. 응답은 `data.items`의 대분류와 `children`의 중분류이며 ID는 문자열입니다. 상품 등록·수정의 `purpose_category_ids`에는 중분류 ID 문자열 배열을 전달합니다. 맞춤 질문 조회와 구매요청 API는 기존처럼 CUSTOMER 전용입니다.
+
 Notion에서 설계하고 springdoc Swagger UI는 추후 연동합니다.
 URL은 /api/v1 접두사 없이 기존 명세의 경로를 사용합니다. JSON 및 쿼리 파라미터는 snake_case, Java 필드는 camelCase를 사용합니다. 성공 {data}, 실패 {code,message,errors} 형식을 따릅니다. DB ID는 BIGINT, Java는 Long, API ID는 문자열입니다. 공통 응답·변환 설정은 BE1 구현에 맞춥니다.
 날짜·시간은 오프셋 포함 ISO 8601, 금액은 원 단위 정수입니다. 외부 API page는 1부터, size 기본값은 20이며 목록은 items/page/size/total_count를 사용합니다. JPA 페이지 번호는 내부에서 page - 1로 변환합니다. DB DATETIME은 팀 합의에 따라 KST로 저장하며 BE3 변환 계층에서 Asia/Seoul과 API +09:00 오프셋을 적용합니다.
