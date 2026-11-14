@@ -41,6 +41,12 @@ public class PurchaseRequest {
   @Column(name = "answers", nullable = false, columnDefinition = "json")
   private String answers;
 
+  @Column(name = "recommendation_claim_token", length = 36)
+  private String recommendationClaimToken;
+
+  @Column(name = "recommendation_deadline_at", columnDefinition = "datetime")
+  private LocalDateTime recommendationDeadlineAt;
+
   protected PurchaseRequest() {}
 
   public PurchaseRequest(
@@ -96,5 +102,35 @@ public class PurchaseRequest {
 
   public String getAnswers() {
     return answers;
+  }
+
+  public String getRecommendationClaimToken() {
+    return recommendationClaimToken;
+  }
+
+  public LocalDateTime getRecommendationDeadlineAt() {
+    return recommendationDeadlineAt;
+  }
+
+  /** Call while holding the purchase row lock; no public/general purpose setter. */
+  public void claimRecommendation(String token, LocalDateTime deadline) {
+    if (status != RecommendationStatus.RECOMMENDING
+        || recommendationClaimToken != null
+        || deadline == null
+        || !deadline.isAfter(createdAt))
+      throw new IllegalStateException("Request cannot be claimed");
+    recommendationClaimToken = java.util.UUID.fromString(token).toString();
+    recommendationDeadlineAt = deadline;
+  }
+
+  public void finishRecommendation(boolean ready, String code) {
+    if (status != RecommendationStatus.RECOMMENDING
+        || (ready && recommendationClaimToken == null)
+        || (ready && code != null)
+        || (!ready && (code == null || !code.matches("[A-Z][A-Z0-9_]{0,49}")))) {
+      throw new IllegalStateException("Invalid recommendation terminal transition");
+    }
+    status = ready ? RecommendationStatus.READY : RecommendationStatus.FAILED;
+    failureCode = code;
   }
 }
