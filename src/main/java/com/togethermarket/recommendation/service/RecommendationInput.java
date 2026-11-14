@@ -35,7 +35,7 @@ public final class RecommendationInput {
           || name.isBlank()
           || description == null
           || business_type == null
-          || price_amount <= 0) {
+          || price_amount < 0) {
         throw new IllegalArgumentException("Invalid product snapshot");
       }
     }

@@ -34,7 +34,7 @@ class ReservationExpirySchedulerTest {
             .withPropertyValues("reservation.expiry-scheduler.delay=PT1H")
             .withBean(ReservationRepository.class, () -> mock(ReservationRepository.class))
             .withBean(ReservationExpiryWorker.class, () -> mock(ReservationExpiryWorker.class))
-            .withBean(Clock.class, Clock::systemUTC);
+            .withBean("reservationClock", Clock.class, Clock::systemUTC);
     context.run(
         c -> {
           org.junit.jupiter.api.Assertions.assertNull(c.getStartupFailure());

@@ -39,6 +39,7 @@ class ReservationDatabaseIntegrationTest {
   static class TimeConfig {
     @Bean
     @Primary
+    @org.springframework.beans.factory.annotation.Qualifier("reservationClock")
     Clock testClock() {
       return Clock.fixed(Instant.parse("2026-11-20T01:00:00Z"), ZoneOffset.UTC);
     }
@@ -479,5 +480,27 @@ class ReservationDatabaseIntegrationTest {
         () -> ownerOrders.reject(d.secondOwner(), d.secondStore(), d.secondOrder(), "다른 사유"));
     assertEquals(
         "STORE_REJECTED", service.detail(d.fixture().customer(), d.reservation()).failureCode());
+  }
+
+  @Test
+  void zeroPriceProductStoresZeroSnapshotAndCorrectReservationTotal() {
+    var f = fixture();
+    f.first().updateDetails("무료 상품", "설명", null, BigDecimal.ZERO, 60);
+    products.saveAndFlush(f.first());
+    var original = f.input();
+    var input =
+        new CreateReservationRequest(
+            original.recommendationCandidateId(),
+            original.customerName(),
+            original.customerPhone(),
+            original.customerNote(),
+            original.pickups(),
+            new BigDecimal("25000"));
+    var created = service.create(f.customer(), UUID.randomUUID().toString(), input);
+    assertEquals(new BigDecimal("25000"), created.reservation().totalAmount());
+    assertEquals(BigDecimal.ZERO, created.reservation().orders().getFirst().unitPriceSnapshot());
+    var detail = service.detail(f.customer(), Long.valueOf(created.reservation().id()));
+    assertEquals(new BigDecimal("25000"), detail.totalAmount());
+    assertEquals(BigDecimal.ZERO, detail.orders().getFirst().unitPriceSnapshot());
   }
 }

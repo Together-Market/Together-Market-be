@@ -38,7 +38,7 @@ public final class CandidateData {
     public Product {
       positive(id);
       positive(storeId);
-      if (priceAmount <= 0
+      if (priceAmount < 0
           || name == null
           || name.isBlank()
           || businessType == null
@@ -54,7 +54,7 @@ public final class CandidateData {
     public SavedItem {
       positive(id);
       positive(productId);
-      if (quantity < 1 || unitPriceSnapshot <= 0) {
+      if (quantity < 1 || unitPriceSnapshot < 0) {
         throw new IllegalArgumentException("Invalid saved recommendation item");
       }
     }
