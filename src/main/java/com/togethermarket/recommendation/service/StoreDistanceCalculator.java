@@ -1,5 +1,6 @@
 package com.togethermarket.recommendation.service;
 
+import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
 /**
@@ -13,11 +14,20 @@ public final class StoreDistanceCalculator {
 
   public static OptionalLong straightLineMeters(
       Double latitudeA, Double longitudeA, Double latitudeB, Double longitudeB) {
+    var distance = preciseStraightLineMeters(latitudeA, longitudeA, latitudeB, longitudeB);
+    return distance.isPresent()
+        ? OptionalLong.of(Math.round(distance.getAsDouble()))
+        : OptionalLong.empty();
+  }
+
+  /** Use unrounded meters for eligibility boundaries; round only for presentation. */
+  public static OptionalDouble preciseStraightLineMeters(
+      Double latitudeA, Double longitudeA, Double latitudeB, Double longitudeB) {
     if (!coordinate(latitudeA, 90)
         || !coordinate(latitudeB, 90)
         || !coordinate(longitudeA, 180)
         || !coordinate(longitudeB, 180)) {
-      return OptionalLong.empty();
+      return OptionalDouble.empty();
     }
     double latA = Math.toRadians(latitudeA);
     double latB = Math.toRadians(latitudeB);
@@ -27,7 +37,7 @@ public final class StoreDistanceCalculator {
         Math.pow(Math.sin(dLat / 2), 2)
             + Math.cos(latA) * Math.cos(latB) * Math.pow(Math.sin(dLon / 2), 2);
     double centralAngle = 2 * Math.asin(Math.sqrt(Math.clamp(h, 0, 1)));
-    return OptionalLong.of(Math.round(EARTH_RADIUS_METERS * centralAngle));
+    return OptionalDouble.of(EARTH_RADIUS_METERS * centralAngle);
   }
 
   private static boolean coordinate(Double value, double bound) {

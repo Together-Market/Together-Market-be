@@ -71,6 +71,11 @@ public final class CandidateRevalidator {
         for (String code : check.reasonCodes())
           reasons.add(new UnavailableReason(product.id(), code));
       }
+      var first = items.getFirst().product();
+      var second = items.getLast().product();
+      if (!StorePairDistance.allows(
+          first.latitude(), first.longitude(), second.latitude(), second.longitude()))
+        reasons.add(new UnavailableReason(null, "STORE_DISTANCE_EXCEEDED_OR_UNKNOWN"));
       if (areas.size() > 1)
         reasons.add(new UnavailableReason(null, "DIFFERENT_RECOMMENDATION_AREAS"));
       if (stores.size() == 2 && identities.size() != 2)

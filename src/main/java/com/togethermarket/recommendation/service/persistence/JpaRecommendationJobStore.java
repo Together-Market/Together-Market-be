@@ -7,7 +7,9 @@ import com.togethermarket.recommendation.entity.*;
 import com.togethermarket.recommendation.repository.*;
 import com.togethermarket.recommendation.service.HybridRecommendationService.RankedCandidate;
 import com.togethermarket.recommendation.service.candidate.RecommendationArea;
+import com.togethermarket.recommendation.service.candidate.StorePairDistance;
 import com.togethermarket.recommendation.service.job.*;
+import com.togethermarket.store.entity.Store;
 import com.togethermarket.store.repository.StoreRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -90,11 +92,13 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       throw new IllegalStateException("Recommendation product disappeared before persistence");
     var areas = new HashMap<Long, RecommendationArea>();
     var identities = new HashMap<Long, String>();
+    var currentStores = new HashMap<Long, Store>();
     if (!current.isEmpty()) {
       stores
           .findAllById(current.values().stream().map(Product::getStoreId).distinct().toList())
           .forEach(
               s -> {
+                currentStores.put(s.getId(), s);
                 identities.put(
                     s.getId(),
                     com.togethermarket.recommendation.service.candidate.StoreIdentity.key(
@@ -116,6 +120,8 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       var second = current.get(Long.valueOf(pair.get(1).id()));
       var total = first.getPriceAmount().add(second.getPriceAmount());
       if (areas.get(first.getStoreId()) == null
+          || !withinStoreDistance(
+              currentStores.get(first.getStoreId()), currentStores.get(second.getStoreId()))
           || areas.get(first.getStoreId()) != areas.get(second.getStoreId())
           || first.getStoreId().equals(second.getStoreId())
           || java.util.Objects.equals(
@@ -180,6 +186,15 @@ public class JpaRecommendationJobStore implements RecommendationJobStore {
       }
     }
     return count;
+  }
+
+  private static boolean withinStoreDistance(Store first, Store second) {
+    if (first == null || second == null) return false;
+    return StorePairDistance.allows(
+        first.getLatitude() == null ? null : first.getLatitude().doubleValue(),
+        first.getLongitude() == null ? null : first.getLongitude().doubleValue(),
+        second.getLatitude() == null ? null : second.getLatitude().doubleValue(),
+        second.getLongitude() == null ? null : second.getLongitude().doubleValue());
   }
 
   private PurchaseRequest owned(Lease lease) {
