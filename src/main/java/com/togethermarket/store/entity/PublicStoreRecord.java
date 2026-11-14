@@ -72,6 +72,17 @@ public class PublicStoreRecord {
     this.matchedStoreId = matchedStoreId;
   }
 
+  @Column(name = "source_record_key", length = 64, columnDefinition = "char(64)")
+  private String sourceRecordKey;
+
+  public String getSourceRecordKey() {
+    return sourceRecordKey;
+  }
+
+  public void match(Long storeId) {
+    this.matchedStoreId = storeId;
+  }
+
   public Long getId() {
     return id;
   }
