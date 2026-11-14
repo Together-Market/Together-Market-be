@@ -81,7 +81,7 @@ public final class CandidateGenerator {
     List<Product> products =
         CandidateRevalidator.loadCatalog(catalog, ids).values().stream()
             .sorted(Comparator.comparing(Product::id))
-            .filter(p -> p.priceAmount() < purchase.budgetAmount())
+            .filter(p -> p.priceAmount() <= purchase.budgetAmount())
             .filter(p -> eligibility.check(p.id(), purchase.pickupAt(), evaluatedAt).allowed())
             .toList();
     var pairs = new ArrayList<Pair>();

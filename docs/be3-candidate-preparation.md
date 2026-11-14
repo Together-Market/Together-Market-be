@@ -1,5 +1,7 @@
 # BE3 추천 후보 생성·재검증·조회 준비
 
+후속 DB 연결·KST 변환·V3 저장소와 최신 활성화 설정은 [공통 코드 연결](be3-database-integration.md)을 참고하세요. 아래는 초기 내부 로직의 설계와 연결 경계 기록입니다.
+
 공통 DB 연결과 분리해 검증한 내부 서비스 로직이다. HTTP API, DB 저장, 세션 인증과 연결된 상태는 아니다. 기존 구매조건 구현은 [be3-purchase-preparation.md](be3-purchase-preparation.md)를 참고한다.
 
 ## 구현 범위
