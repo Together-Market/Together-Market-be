@@ -115,10 +115,25 @@ class ReservationControllerTest {
                 .contentType("application/json")
                 .content(BODY.replace("55000", "-1")))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.errors[0].field").value("expected_total_amount"))
+        .andExpect(jsonPath("$.errors[0].reason").isString());
     mvc.perform(get("/reservations").with(as(UserRole.CUSTOMER)).param("status", "UNKNOWN"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     verifyNoInteractions(service);
+  }
+
+  @Test
+  void nestedPickupValidationUsesRequestJsonName() throws Exception {
+    mvc.perform(
+            post("/reservations")
+                .with(as(UserRole.CUSTOMER))
+                .with(csrf())
+                .contentType("application/json")
+                .content(BODY.replace("\"2026-11-20T15:00:00+09:00\"", "null")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("pickups[0].requested_pickup_at"))
+        .andExpect(jsonPath("$.errors[0].reason").isString());
   }
 }
