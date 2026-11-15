@@ -3,6 +3,9 @@ package com.togethermarket.recommendation.service;
 import com.togethermarket.recommendation.service.RecommendationInput.Candidate;
 import com.togethermarket.recommendation.service.RecommendationInput.Context;
 import com.togethermarket.recommendation.service.RecommendationInput.Evaluation;
+import com.togethermarket.recommendation.service.candidate.GiftComposition;
+import com.togethermarket.recommendation.service.candidate.PreferenceSignals;
+import com.togethermarket.recommendation.service.candidate.RecipientPriority;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -39,11 +42,27 @@ public final class HybridRecommendationService {
         throw new IllegalArgumentException("Duplicate candidate or product pair");
       }
     }
+    var composition = GiftComposition.from(context.purpose());
+    var recipient = RecipientPriority.from(context.answers());
+    var preferences = PreferenceSignals.from(context.answers());
     var candidates =
         input.stream()
             .filter(
                 c -> c.pickup_eligible() && c.products().stream().allMatch(p -> p.is_available()))
             .filter(c -> c.totalAmount() <= context.budget_amount())
+            .filter(
+                c ->
+                    recipient.accepts(
+                        recipient.productKind(c.products().get(0).name()),
+                        recipient.productKind(c.products().get(1).name())))
+            .filter(c -> c.products().stream().noneMatch(p -> preferences.excludes(p.name())))
+            .filter(
+                c ->
+                    composition.accepts(
+                        GiftComposition.wholeCake(
+                            c.products().get(0).name(), c.products().get(0).description()),
+                        GiftComposition.wholeCake(
+                            c.products().get(1).name(), c.products().get(1).description())))
             .toList();
     if (candidates.isEmpty()) {
       return List.of();
@@ -51,6 +70,7 @@ public final class HybridRecommendationService {
     var byId = new HashMap<String, Candidate>();
     candidates.forEach(c -> byId.put(c.candidate_id(), c));
     var seen = new HashSet<String>();
+    var recipientScores = new HashMap<String, Integer>();
     var remaining = new ArrayList<RankedCandidate>();
     for (Evaluation evaluation : evaluator.evaluate(context, candidates)) {
       Candidate candidate = byId.get(evaluation.candidate_id());
@@ -64,6 +84,7 @@ public final class HybridRecommendationService {
         throw new IllegalArgumentException("AI evidence contains unrelated product IDs");
       }
       if (evaluation.eligible()) {
+        recipientScores.put(candidate.candidate_id(), evaluation.recipient_score());
         remaining.add(
             new RankedCandidate(
                 candidate,
@@ -93,7 +114,21 @@ public final class HybridRecommendationService {
       var best =
           remaining.stream()
               .min(
-                  Comparator.<RankedCandidate>comparingDouble(c -> -adjusted(c, selected))
+                  Comparator.<RankedCandidate>comparingInt(
+                          c ->
+                              -recipient.pairTier(
+                                  c.candidate().products().get(0).name(),
+                                  c.candidate().products().get(1).name()))
+                      .thenComparingInt(
+                          c ->
+                              recipient.specified()
+                                  ? -recipientScores.get(c.candidate().candidate_id())
+                                  : 0)
+                      .thenComparingDouble(
+                          c ->
+                              -composition.budgetFit(
+                                  c.candidate().totalAmount(), context.budget_amount()))
+                      .thenComparingDouble(c -> -adjusted(c, selected))
                       .thenComparing(c -> c.candidate().candidate_id()))
               .orElseThrow();
       selected.add(best);

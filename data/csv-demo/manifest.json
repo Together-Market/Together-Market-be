@@ -8,14 +8,14 @@
   "original_csv_rows": 3265,
   "stores": 2224,
   "product_stores": 633,
-  "products": 1899,
+  "products": 1980,
   "statuses": {
-    "ON_SALE": 1826,
+    "ON_SALE": 1907,
     "SOLD_OUT": 44,
     "PAUSED": 29
   },
   "files": {
-    "catalog.json": "483dd3efb1c01faa7c68328d6096e99712ee15a6335f483477b9e2772c571382",
+    "catalog.json": "f5820567ece2542b552eee5bcf80bb36fa2fbf5952b1e8bc89828e1127bbe5ea",
     "raw/bojeong_candidates_sbiz.csv": "19cefb698227a5a08ed0bc11770f0ecaf7cf6086f9de352fb04b8365845e81b5",
     "raw/bojeong_candidates_ypay.csv": "341ca725e4c3ee809fcd0928ee2bc1dec11b868c21a1ae17d9d5e98c67107f30",
     "raw/dongbaek_candidates_sbiz.csv": "dbfe328c9d65f812cec492169df658b636bd42c1b21cd4327c2088e514401fff",

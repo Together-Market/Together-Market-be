@@ -21,8 +21,10 @@ import java.util.Set;
 public final class CandidateGenerator {
   private static final int SHORTLIST_PER_AREA = 256;
   private static final Comparator<Pair> PAIR_ORDER =
-      Comparator.comparingDouble(Pair::score)
+      Comparator.comparingInt(Pair::recipientTier)
           .reversed()
+          .thenComparing(Comparator.comparingDouble(Pair::budgetFit).reversed())
+          .thenComparing(Comparator.comparingDouble(Pair::score).reversed())
           .thenComparing(p -> p.a().id())
           .thenComparing(p -> p.b().id());
   private final CatalogSource catalog;
@@ -54,13 +56,31 @@ public final class CandidateGenerator {
       Long categoryId,
       Set<Long> siblingCategoryIds,
       Map<Long, Double> productScores,
-      PreferenceSignals text) {
+      PreferenceSignals text,
+      RecipientPriority recipient,
+      GiftComposition composition) {
+    public Preferences(
+        Long categoryId,
+        Set<Long> siblings,
+        Map<Long, Double> scores,
+        PreferenceSignals text,
+        RecipientPriority recipient) {
+      this(categoryId, siblings, scores, text, recipient, GiftComposition.none());
+    }
+
+    public Preferences(
+        Long categoryId, Set<Long> siblings, Map<Long, Double> scores, PreferenceSignals text) {
+      this(categoryId, siblings, scores, text, RecipientPriority.none());
+    }
+
     public Preferences(Long categoryId, Set<Long> siblings, Map<Long, Double> scores) {
       this(categoryId, siblings, scores, PreferenceSignals.none());
     }
 
     public Preferences {
       Objects.requireNonNull(text);
+      Objects.requireNonNull(recipient);
+      Objects.requireNonNull(composition);
       CandidateData.positive(categoryId);
       siblingCategoryIds = Set.copyOf(siblingCategoryIds);
       siblingCategoryIds.forEach(CandidateData::positive);
@@ -116,9 +136,14 @@ public final class CandidateGenerator {
     var areas = new HashMap<Long, RecommendationArea>();
     var productScores = new HashMap<Long, Double>();
     var matches = new HashMap<Long, Long>();
+    var recipientKinds = new HashMap<Long, Integer>();
+    var wholeCakes = new HashMap<Long, Boolean>();
     var businessIds = new HashMap<String, Integer>();
     for (var product : products) {
       matches.put(product.id(), preferences.text().matches(product.name()));
+      recipientKinds.put(product.id(), preferences.recipient().productKind(product.name()));
+      wholeCakes.put(
+          product.id(), GiftComposition.wholeCake(product.name(), product.description()));
       businessIds.computeIfAbsent(product.businessType(), key -> businessIds.size());
       areas.put(product.id(), RecommendationArea.of(product));
       productScores.put(
@@ -144,7 +169,13 @@ public final class CandidateGenerator {
         if (areas.get(b.id()) != area
             || a.storeId().equals(b.storeId())
             || a.storeIdentity().equals(b.storeIdentity())
-            || !preferences.text().accepts(matches.get(a.id()), matches.get(b.id()))
+            || !preferences.composition().accepts(wholeCakes.get(a.id()), wholeCakes.get(b.id()))
+            || !preferences
+                .recipient()
+                .accepts(recipientKinds.get(a.id()), recipientKinds.get(b.id()))
+            || (!preferences.recipient().parents()
+                && !preferences.composition().birthday()
+                && !preferences.text().accepts(matches.get(a.id()), matches.get(b.id())))
             || b.priceAmount() > purchase.budgetAmount() - a.priceAmount()) continue;
         var distance =
             StoreDistanceCalculator.preciseStraightLineMeters(
@@ -164,15 +195,24 @@ public final class CandidateGenerator {
             businessPools
                 .get(area)
                 .computeIfAbsent(businessKey, key -> new PriorityQueue<>(PAIR_ORDER.reversed()));
+        var pair =
+            new Pair(
+                a,
+                b,
+                meters,
+                score,
+                RecipientPriority.pairTier(recipientKinds.get(a.id()), recipientKinds.get(b.id())),
+                preferences
+                    .composition()
+                    .budgetFit(a.priceAmount() + b.priceAmount(), purchase.budgetAmount()));
         if (pool.size() < SHORTLIST_PER_AREA
-            || score >= pool.peek().score()
+            || PAIR_ORDER.compare(pair, pool.peek()) <= 0
             || businessPool.size() < limits.maxCandidates()
-            || score >= businessPool.peek().score()
+            || PAIR_ORDER.compare(pair, businessPool.peek()) <= 0
             || perProduct.get(a.id()).size() < 4
-            || score >= perProduct.get(a.id()).peek().score()
+            || PAIR_ORDER.compare(pair, perProduct.get(a.id()).peek()) <= 0
             || perProduct.get(b.id()).size() < 4
-            || score >= perProduct.get(b.id()).peek().score()) {
-          var pair = new Pair(a, b, meters, score);
+            || PAIR_ORDER.compare(pair, perProduct.get(b.id()).peek()) <= 0) {
           retain(pool, pair, SHORTLIST_PER_AREA);
           retain(businessPool, pair, limits.maxCandidates());
           retain(perProduct.get(a.id()), pair, 4);
@@ -201,11 +241,14 @@ public final class CandidateGenerator {
                   || storeUses.getOrDefault(pair.b().storeIdentity(), 0) >= 3
                   || nameUses.getOrDefault(pair.names(), 0) >= 2);
       if (pairs.isEmpty()) break;
-      // Preference coverage dominates distance, then prefer new names/merchants within that tier.
+      // Recipient fit dominates preference coverage, distance and diversity adjustments.
       var pair =
           pairs.stream()
               .min(
-                  Comparator.<Pair>comparingDouble(
+                  Comparator.comparingInt(Pair::recipientTier)
+                      .reversed()
+                      .thenComparing(Comparator.comparingDouble(Pair::budgetFit).reversed())
+                      .thenComparingDouble(
                           p ->
                               -(p.score()
                                   + (areaUses.contains(areas.get(p.a().id())) ? 0 : 10)
@@ -248,7 +291,8 @@ public final class CandidateGenerator {
     }
   }
 
-  private record Pair(Product a, Product b, Double distance, double score) {
+  private record Pair(
+      Product a, Product b, Double distance, double score, int recipientTier, double budgetFit) {
     List<String> names() {
       return CombinationDiversity.names(List.of(a.name(), b.name()));
     }

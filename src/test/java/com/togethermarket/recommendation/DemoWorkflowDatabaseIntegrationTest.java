@@ -157,8 +157,8 @@ class DemoWorkflowDatabaseIntegrationTest {
         products.saveAndFlush(
             new Product(
                 storeB,
-                "생일 케이크",
-                "친구와 나눌 케이크",
+                "생일 홀케이크 1호",
+                "친구와 나눌 생크림 홀케이크 1개",
                 null,
                 new BigDecimal("25000"),
                 30,
@@ -167,14 +167,25 @@ class DemoWorkflowDatabaseIntegrationTest {
         products.saveAndFlush(
             new Product(
                 storeB,
-                "쿠키 세트",
-                "친구와 나눌 쿠키",
+                "생일 홀케이크 2호",
+                "친구들과 나눌 홀케이크 한 개",
                 null,
                 new BigDecimal("15000"),
                 15,
                 SaleStatus.ON_SALE));
+    // A rejected birthday reservation needs another pair that still includes a whole cake.
+    var d =
+        products.saveAndFlush(
+            new Product(
+                storeB,
+                "생일 초코 홀케이크 1호",
+                "대체 예약용 초코 홀케이크 1개",
+                null,
+                new BigDecimal("20000"),
+                30,
+                SaleStatus.ON_SALE));
     productA = a.getId();
-    for (var p : List.of(a, b, c)) tags.saveAndFlush(new ProductPurposeTag(p.getId(), 11L));
+    for (var p : List.of(a, b, c, d)) tags.saveAndFlush(new ProductPurposeTag(p.getId(), 11L));
   }
 
   @AfterEach
@@ -272,6 +283,15 @@ class DemoWorkflowDatabaseIntegrationTest {
                 .andReturn())
             .path("data");
     assertThat(list.path("items").size()).isGreaterThan(0);
+    for (var recommendation : list.path("items")) {
+      int wholeCakes = 0;
+      for (var item : recommendation.path("items")) {
+        var product = item.path("product");
+        if (com.togethermarket.recommendation.service.candidate.GiftComposition.wholeCake(
+            product.path("name").asString(), product.path("description").asString())) wholeCakes++;
+      }
+      assertThat(wholeCakes).isEqualTo(1);
+    }
     var candidate = list.path("items").get(0);
     String candidateId = candidate.path("id").asString();
     mvc.perform(get("/recommendations/" + candidateId).session(customerLogin.session()))

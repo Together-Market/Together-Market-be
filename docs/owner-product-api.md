@@ -10,11 +10,11 @@
 
 상품 등록은 name,description,image_url,price_amount,preparation_minutes,sale_status,purpose_category_ids 필수. 이미지가 없으면 null.
 PATCH는 1개 이상 필드. 필수 문자열/숫자/태그는 null 불가, image_url은 명시적 null로 제거 가능.
-이미지는 유효한 HTTPS URL만 저장(외부 다운로드/업로드 없음). 사용자 정보가 포함된 URL은 거부한다.
+이미지는 유효한 HTTPS URL만 저장한다. 파일 업로드는 별도 `POST /owner/stores/{store_id}/product-images`로 지원하며, 반환된 `image_url`을 상품 등록/수정에 사용한다. 자세한 내용은 `docs/product-image-upload.md` 참조.
 가격은 0~999999999999 원 단위 정수, 준비시간 0~2147483647 정수. DB TEXT는 UTF-8 65535바이트 길이 검사.
 태그는 존재하는 중분류 ID 문자열 배열 1개 이상. 중복/숫자형 ID/대분류/없는 ID 거부.
 모든 기능에서 OWNER 역할 및 본인 점포 여부 확인, 수정은 product_id와 store_id가 일치해야 함. 타인/없는 객체 404.
-고객 예약 당시 snapshot은 변경하지 않는다. 재고 수량·상품 삭제·이미지 업로드는 추가하지 않았다.
+고객 예약 당시 snapshot은 변경하지 않는다. 재고 수량·상품 삭제는 추가하지 않았다.
 
 ## 트랜잭션 및 BE1 연동
 
