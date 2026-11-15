@@ -13,8 +13,21 @@ public record RecipientPriority(boolean specified, boolean parents) {
   public static RecipientPriority from(Map<String, String> answers) {
     String recipient = answers.getOrDefault("recipient", "").strip().toLowerCase(Locale.ROOT);
     boolean parents =
-        List.of("부모", "어머니", "아버지", "엄마", "아빠", "모친", "부친").stream().anyMatch(recipient::contains)
-            || List.of("parent", "parents", "mother", "father", "mom", "dad").contains(recipient);
+        List.of("부모", "어머니", "아버지", "엄마", "아빠", "모친", "부친", "할머니", "할아버지", "조모", "조부").stream()
+                .anyMatch(recipient::contains)
+            || List.of(
+                    "parent",
+                    "parents",
+                    "mother",
+                    "father",
+                    "mom",
+                    "dad",
+                    "grandmother",
+                    "grandfather",
+                    "grandparents",
+                    "grandma",
+                    "grandpa")
+                .contains(recipient);
     return new RecipientPriority(!recipient.isBlank(), parents);
   }
 

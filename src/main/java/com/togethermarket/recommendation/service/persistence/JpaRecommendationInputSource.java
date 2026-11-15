@@ -103,7 +103,9 @@ public class JpaRecommendationInputSource {
             siblings,
             Map.of(),
             com.togethermarket.recommendation.service.candidate.PreferenceSignals.from(values),
-            com.togethermarket.recommendation.service.candidate.RecipientPriority.from(values)),
+            com.togethermarket.recommendation.service.candidate.RecipientPriority.from(values),
+            com.togethermarket.recommendation.service.candidate.GiftComposition.from(
+                category.getName())),
         ids);
   }
 }

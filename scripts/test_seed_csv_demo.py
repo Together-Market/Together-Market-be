@@ -13,8 +13,8 @@ class BundleTest(unittest.TestCase):
         manifest, catalog, rows, links = load_bundle()
         self.assertEqual(len(rows), 3265)
         self.assertEqual(len(catalog['stores']), 2224)
-        self.assertEqual(manifest['products'], 1899)
-        self.assertEqual(manifest['statuses']['ON_SALE'], 1826)
+        self.assertEqual(manifest['products'], 1977)
+        self.assertEqual(manifest['statuses']['ON_SALE'], 1904)
         self.assertEqual(rows.keys(), links.keys())
         for store in catalog['stores']:
             self.assertEqual(set(store), {'store_key', 'name', 'business_type', 'address',

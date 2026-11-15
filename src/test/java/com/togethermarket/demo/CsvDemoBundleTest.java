@@ -11,8 +11,8 @@ class CsvDemoBundleTest {
     assertThat(bundle.catalog().stores()).hasSize(2224);
     assertThat(bundle.rows()).hasSize(3265);
     assertThat(bundle.catalog().stores().stream().flatMap(s -> s.products().stream()))
-        .hasSize(1899);
-    assertThat(bundle.manifest().statuses()).containsEntry("ON_SALE", 1826);
+        .hasSize(1977);
+    assertThat(bundle.manifest().statuses()).containsEntry("ON_SALE", 1904);
   }
 
   @Test

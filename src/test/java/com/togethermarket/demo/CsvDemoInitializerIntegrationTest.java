@@ -36,13 +36,13 @@ class CsvDemoInitializerIntegrationTest {
   @Test
   void startupSeedsOnceAndRepeatedConcurrentAndFailedImportsPreserveData() throws Exception {
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM stores", Integer.class)).isEqualTo(2224);
-    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Integer.class)).isEqualTo(1899);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products", Integer.class)).isEqualTo(1977);
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM public_store_records", Integer.class))
         .isEqualTo(3265);
     assertThat(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM products WHERE sale_status='ON_SALE'", Integer.class))
-        .isEqualTo(1826);
+        .isEqualTo(1904);
     var bundle = CsvDemoBundle.load();
     var seeder = new CsvDemoSeeder(dataSource);
     Long pid = jdbc.queryForObject("SELECT MIN(id) FROM products", Long.class);
