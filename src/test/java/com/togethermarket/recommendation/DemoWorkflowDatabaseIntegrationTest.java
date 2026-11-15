@@ -157,8 +157,8 @@ class DemoWorkflowDatabaseIntegrationTest {
         products.saveAndFlush(
             new Product(
                 storeB,
-                "생일 케이크",
-                "친구와 나눌 케이크",
+                "생일 홀케이크 1호",
+                "친구와 나눌 생크림 홀케이크 1개",
                 null,
                 new BigDecimal("25000"),
                 30,
