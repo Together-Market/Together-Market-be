@@ -11,6 +11,34 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class RecipientPriorityTest {
+  @Test
+  void individualKnittingInterestRequiresMaterialsBeforeGenericFamilyGifts() {
+    for (var answers :
+        List.of(
+            Map.of("recipient", "뜨개질을 좋아하시는 할머니"),
+            Map.of("recipient", "할머니", "category_preference", "뜨개질 재료와 케이크"),
+            Map.of("recipient", "할머니", "style", "뜨개질을 좋아하세요"))) {
+      var policy = RecipientPriority.from(answers);
+      assertThat(policy.knitting()).isTrue();
+      assertThat(policy.pairTier("뜨개실·코바늘 재료 세트", "홀케이크 2호"))
+          .isGreaterThan(policy.pairTier("꽃다발", "홀케이크 2호"));
+      assertThat(policy.accepts(policy.productKind("드립백 커피 선물 세트"), policy.productKind("문구 선물 세트")))
+          .isFalse();
+      assertThat(policy.accepts(policy.productKind("꽃바구니"), policy.productKind("홀케이크 2호")))
+          .isFalse();
+    }
+    for (String name : List.of("뜨개실·코바늘 재료 세트", "코바늘", "프리미엄 뜨개실·대바늘 세트", "목도리 뜨개질 키트"))
+      assertThat(RecipientPriority.knittingMaterial(name)).isTrue();
+    for (String name : List.of("코바늘 인형 완제품", "뜨개 가방", "코바늘 교재", "문구 세트"))
+      assertThat(RecipientPriority.knittingMaterial(name)).isFalse();
+    assertThat(
+            RecipientPriority.from(Map.of("recipient", "할머니", "category_preference", "뜨개질 말고 꽃"))
+                .knitting())
+        .isFalse();
+    var excluded = PreferenceSignals.from(Map.of("excluded_products", "뜨개질"));
+    assertThat(excluded.excludes("프리미엄 뜨개실·대바늘 세트")).isTrue();
+  }
+
   private Product product(long id, String name, long price, Set<Long> categories) {
     return new Product(id, id, name, "", "업종", price, categories, 37.32117, 127.11011, "id:" + id);
   }

@@ -43,12 +43,18 @@ public final class HybridRecommendationService {
       }
     }
     var composition = GiftComposition.from(context.purpose());
+    var recipient = RecipientPriority.from(context.answers());
     var preferences = PreferenceSignals.from(context.answers());
     var candidates =
         input.stream()
             .filter(
                 c -> c.pickup_eligible() && c.products().stream().allMatch(p -> p.is_available()))
             .filter(c -> c.totalAmount() <= context.budget_amount())
+            .filter(
+                c ->
+                    recipient.accepts(
+                        recipient.productKind(c.products().get(0).name()),
+                        recipient.productKind(c.products().get(1).name())))
             .filter(c -> c.products().stream().noneMatch(p -> preferences.excludes(p.name())))
             .filter(
                 c ->
@@ -64,7 +70,6 @@ public final class HybridRecommendationService {
     var byId = new HashMap<String, Candidate>();
     candidates.forEach(c -> byId.put(c.candidate_id(), c));
     var seen = new HashSet<String>();
-    var recipient = RecipientPriority.from(context.answers());
     var recipientScores = new HashMap<String, Integer>();
     var remaining = new ArrayList<RankedCandidate>();
     for (Evaluation evaluation : evaluator.evaluate(context, candidates)) {
