@@ -14,6 +14,17 @@ class CsvDemoBirthdayRecommendationTest {
   @Test
   void grandmotherBirthdayUsesWholeCakeAndFlowersAtSixtyNinetyAndOneTwentyThousand()
       throws Exception {
+    verifyCatalog(Map.of("recipient", "할머니", "category_preference", "꽃"), false);
+  }
+
+  @Test
+  void knittingGrandmotherGetsMaterialsAndWholeCakeInsteadOfCoffeeStationeryOrFlowers()
+      throws Exception {
+    verifyCatalog(
+        Map.of("recipient", "뜨개질을 좋아하시는 할머니", "category_preference", "뜨개질 재료와 홀케이크"), true);
+  }
+
+  private void verifyCatalog(Map<String, String> answers, boolean knitting) throws Exception {
     var bundle = CsvDemoBundle.load();
     var products = new HashMap<Long, Product>();
     var onSale = new HashSet<Long>();
@@ -69,7 +80,6 @@ class CsvDemoBirthdayRecommendationTest {
                                 "홀케이크를 포함한 생신 선물 구성입니다."))
                     .toList(),
             RankingModel.baseline());
-    var answers = Map.of("recipient", "할머니", "category_preference", "꽃");
     var preferences =
         new CandidateGenerator.Preferences(
             11L,
@@ -96,6 +106,9 @@ class CsvDemoBirthdayRecommendationTest {
           .allSatisfy(
               r -> {
                 assertThat(r.candidate().totalAmount()).isLessThanOrEqualTo(budget);
+                if (knitting)
+                  assertThat(r.candidate().products())
+                      .anyMatch(p -> RecipientPriority.knittingMaterial(p.name()));
                 assertThat(
                         r.candidate().products().stream()
                             .filter(p -> GiftComposition.wholeCake(p.name(), p.description()))
@@ -103,12 +116,13 @@ class CsvDemoBirthdayRecommendationTest {
                     .isEqualTo(1);
               });
       var top = results.getFirst().candidate();
-      assertThat(top.products()).anyMatch(p -> preferences.recipient().productKind(p.name()) == 1);
+      assertThat(top.products())
+          .anyMatch(p -> preferences.recipient().productKind(p.name()) == (knitting ? 4 : 1));
       assertThat(top.totalAmount()).isGreaterThan(previous);
       if (budget == 120000) assertThat(top.totalAmount()).isEqualTo(120000);
       previous = top.totalAmount();
       System.out.println(
-          "BIRTHDAY_CATALOG budget="
+          (knitting ? "KNITTING_CATALOG budget=" : "BIRTHDAY_CATALOG budget=")
               + budget
               + " total="
               + top.totalAmount()

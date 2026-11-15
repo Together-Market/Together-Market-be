@@ -22,7 +22,8 @@ public record PreferenceSignals(long desired, List<String> excluded, boolean req
           List.of("공예", "꾸미기", "키트"),
           List.of("반려동물", "산책"),
           List.of("머그컵", "식탁", "생활소품"),
-          List.of("운동", "스포츠", "야외활동", "피크닉"));
+          List.of("운동", "스포츠", "야외활동", "피크닉"),
+          List.of("뜨개질", "뜨개", "뜨개실", "털실", "원사", "코바늘", "대바늘"));
   private static final Pattern NEGATIVE = Pattern.compile("말고|빼고|제외|싫|원하지|안좋아");
   private static final Pattern ALTERNATIVE = Pattern.compile("또는|혹은|아무거나|중하나|or|/");
 

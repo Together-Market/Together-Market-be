@@ -167,8 +167,8 @@ class DemoWorkflowDatabaseIntegrationTest {
         products.saveAndFlush(
             new Product(
                 storeB,
-                "쿠키 세트",
-                "친구와 나눌 쿠키",
+                "생일 홀케이크 2호",
+                "친구들과 나눌 홀케이크 한 개",
                 null,
                 new BigDecimal("15000"),
                 15,
@@ -283,6 +283,15 @@ class DemoWorkflowDatabaseIntegrationTest {
                 .andReturn())
             .path("data");
     assertThat(list.path("items").size()).isGreaterThan(0);
+    for (var recommendation : list.path("items")) {
+      int wholeCakes = 0;
+      for (var item : recommendation.path("items")) {
+        var product = item.path("product");
+        if (com.togethermarket.recommendation.service.candidate.GiftComposition.wholeCake(
+            product.path("name").asString(), product.path("description").asString())) wholeCakes++;
+      }
+      assertThat(wholeCakes).isEqualTo(1);
+    }
     var candidate = list.path("items").get(0);
     String candidateId = candidate.path("id").asString();
     mvc.perform(get("/recommendations/" + candidateId).session(customerLogin.session()))

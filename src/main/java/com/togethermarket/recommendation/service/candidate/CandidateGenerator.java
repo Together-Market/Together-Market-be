@@ -170,6 +170,9 @@ public final class CandidateGenerator {
             || a.storeId().equals(b.storeId())
             || a.storeIdentity().equals(b.storeIdentity())
             || !preferences.composition().accepts(wholeCakes.get(a.id()), wholeCakes.get(b.id()))
+            || !preferences
+                .recipient()
+                .accepts(recipientKinds.get(a.id()), recipientKinds.get(b.id()))
             || (!preferences.recipient().parents()
                 && !preferences.composition().birthday()
                 && !preferences.text().accepts(matches.get(a.id()), matches.get(b.id())))
