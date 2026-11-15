@@ -173,8 +173,19 @@ class DemoWorkflowDatabaseIntegrationTest {
                 new BigDecimal("15000"),
                 15,
                 SaleStatus.ON_SALE));
+    // A rejected birthday reservation needs another pair that still includes a whole cake.
+    var d =
+        products.saveAndFlush(
+            new Product(
+                storeB,
+                "생일 초코 홀케이크 1호",
+                "대체 예약용 초코 홀케이크 1개",
+                null,
+                new BigDecimal("20000"),
+                30,
+                SaleStatus.ON_SALE));
     productA = a.getId();
-    for (var p : List.of(a, b, c)) tags.saveAndFlush(new ProductPurposeTag(p.getId(), 11L));
+    for (var p : List.of(a, b, c, d)) tags.saveAndFlush(new ProductPurposeTag(p.getId(), 11L));
   }
 
   @AfterEach
