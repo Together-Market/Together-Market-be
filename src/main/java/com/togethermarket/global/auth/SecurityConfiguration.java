@@ -66,7 +66,7 @@ public class SecurityConfiguration {
     http.formLogin(c -> c.disable()).httpBasic(c -> c.disable()).logout(c -> c.disable());
     http.authorizeHttpRequests(
         a ->
-            a.requestMatchers("/auth/csrf", "/auth/login", "/auth/logout")
+            a.requestMatchers("/auth/csrf", "/auth/login", "/auth/logout", "/product-images/*")
                 .permitAll()
                 .requestMatchers("/owner/**")
                 .hasRole("OWNER")

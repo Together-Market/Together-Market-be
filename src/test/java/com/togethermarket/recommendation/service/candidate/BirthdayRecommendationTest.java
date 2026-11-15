@@ -152,6 +152,38 @@ class BirthdayRecommendationTest {
   }
 
   @Test
+  void packagingCupCakeSpellingsAndContradictoryDescriptionsCannotQualify() {
+    for (String name :
+        List.of(
+            "홀케이크 포장박스 1호",
+            "케익 포장 상자 2호",
+            "홀케잌 박스 1호",
+            "컵케잌 1호",
+            "컵케익 1호",
+            "팬케익 2호",
+            "롤케잌 1호",
+            "cupcake 1호")) {
+      assertThat(GiftComposition.wholeCake(name, "홀케이크용 상품")).as(name).isFalse();
+    }
+    for (String description :
+        List.of(
+            "미니 케이크입니다. 홀케이크가 아닙니다.",
+            "미니 케잌 1호",
+            "컵케익 1개",
+            "홀케이크 아님",
+            "홀케이크가 아닙니다.",
+            "홀 케익은 아니에요",
+            "홀케이크 미포함",
+            "not a whole cake",
+            "mini cake 1호")) {
+      assertThat(GiftComposition.wholeCake("딸기 케이크", description)).as(description).isFalse();
+    }
+    assertThat(GiftComposition.wholeCake("딸기 홀케이크 2호", "포장박스에 담아 드립니다.")).isTrue();
+    assertThat(GiftComposition.wholeCake("딸기 케이크", "2호 홀케이크와 미니 꽃다발 구성")).isTrue();
+    assertThat(GiftComposition.wholeCake("딸기 케이크", "미니 케이크가 아닌 2호 홀케이크입니다.")).isTrue();
+  }
+
+  @Test
   void onlyExplicitWholeCakesQualifyAndOtherOccasionsKeepTheirComposition() {
     for (String name : List.of("홀케이크", "생크림 케이크 2호", "홀 케익 1호", "Whole cake"))
       assertThat(GiftComposition.wholeCake(name, "")).isTrue();
