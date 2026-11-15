@@ -18,6 +18,19 @@ public class ApiExceptionHandler {
     return ResponseEntity.status(e.status()).body(ApiError.of(e.code(), e.getMessage()));
   }
 
+  @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+  ResponseEntity<ApiError> imageTooLarge(
+      org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+    return ResponseEntity.badRequest().body(ApiError.of("INVALID_IMAGE", "이미지는 5MB 이하로 업로드해 주세요."));
+  }
+
+  @ExceptionHandler(
+      org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+  ResponseEntity<ApiError> missingPart(
+      org.springframework.web.multipart.support.MissingServletRequestPartException e) {
+    return ResponseEntity.badRequest().body(ApiError.of("INVALID_IMAGE", "file 필드에 이미지를 넣어 주세요."));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   ResponseEntity<ApiError> validation(MethodArgumentNotValidException e) {
     return ResponseEntity.badRequest()
