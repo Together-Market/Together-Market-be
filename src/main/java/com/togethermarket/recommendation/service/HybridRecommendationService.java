@@ -3,6 +3,7 @@ package com.togethermarket.recommendation.service;
 import com.togethermarket.recommendation.service.RecommendationInput.Candidate;
 import com.togethermarket.recommendation.service.RecommendationInput.Context;
 import com.togethermarket.recommendation.service.RecommendationInput.Evaluation;
+import com.togethermarket.recommendation.service.candidate.RecipientPriority;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,6 +52,8 @@ public final class HybridRecommendationService {
     var byId = new HashMap<String, Candidate>();
     candidates.forEach(c -> byId.put(c.candidate_id(), c));
     var seen = new HashSet<String>();
+    var recipient = RecipientPriority.from(context.answers());
+    var recipientScores = new HashMap<String, Integer>();
     var remaining = new ArrayList<RankedCandidate>();
     for (Evaluation evaluation : evaluator.evaluate(context, candidates)) {
       Candidate candidate = byId.get(evaluation.candidate_id());
@@ -64,6 +67,7 @@ public final class HybridRecommendationService {
         throw new IllegalArgumentException("AI evidence contains unrelated product IDs");
       }
       if (evaluation.eligible()) {
+        recipientScores.put(candidate.candidate_id(), evaluation.recipient_score());
         remaining.add(
             new RankedCandidate(
                 candidate,
@@ -93,7 +97,17 @@ public final class HybridRecommendationService {
       var best =
           remaining.stream()
               .min(
-                  Comparator.<RankedCandidate>comparingDouble(c -> -adjusted(c, selected))
+                  Comparator.<RankedCandidate>comparingInt(
+                          c ->
+                              -recipient.pairTier(
+                                  c.candidate().products().get(0).name(),
+                                  c.candidate().products().get(1).name()))
+                      .thenComparingInt(
+                          c ->
+                              recipient.specified()
+                                  ? -recipientScores.get(c.candidate().candidate_id())
+                                  : 0)
+                      .thenComparingDouble(c -> -adjusted(c, selected))
                       .thenComparing(c -> c.candidate().candidate_id()))
               .orElseThrow();
       selected.add(best);
