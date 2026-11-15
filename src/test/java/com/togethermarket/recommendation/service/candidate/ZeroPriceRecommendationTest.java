@@ -57,7 +57,7 @@ class ZeroPriceRecommendationTest {
             RankingModel.baseline());
     var ranked =
         ranker.recommend(
-            new RecommendationInput.Context("생일", 10000, PICKUP.toString(), Map.of()), candidates);
+            new RecommendationInput.Context("감사", 10000, PICKUP.toString(), Map.of()), candidates);
     assertThat(ranked).hasSize(1);
     var saved =
         new SavedCandidate(

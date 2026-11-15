@@ -58,7 +58,7 @@ class HybridRecommendationServiceTest {
   }
 
   private final Context context =
-      new Context("생일", 60000, "2026-11-15T18:00:00+09:00", Map.of("style", "아기자기함"));
+      new Context("감사", 60000, "2026-11-15T18:00:00+09:00", Map.of("style", "아기자기함"));
 
   private Product product(String id, String store, long price, boolean available) {
     return new Product(id, store, "시연 상품 " + id, "검수한 시연 설명", "시연 업종", price, available);

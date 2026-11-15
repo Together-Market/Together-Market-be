@@ -3,6 +3,8 @@ package com.togethermarket.recommendation.service;
 import com.togethermarket.recommendation.service.RecommendationInput.Candidate;
 import com.togethermarket.recommendation.service.RecommendationInput.Context;
 import com.togethermarket.recommendation.service.RecommendationInput.Evaluation;
+import com.togethermarket.recommendation.service.candidate.GiftComposition;
+import com.togethermarket.recommendation.service.candidate.PreferenceSignals;
 import com.togethermarket.recommendation.service.candidate.RecipientPriority;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,11 +42,21 @@ public final class HybridRecommendationService {
         throw new IllegalArgumentException("Duplicate candidate or product pair");
       }
     }
+    var composition = GiftComposition.from(context.purpose());
+    var preferences = PreferenceSignals.from(context.answers());
     var candidates =
         input.stream()
             .filter(
                 c -> c.pickup_eligible() && c.products().stream().allMatch(p -> p.is_available()))
             .filter(c -> c.totalAmount() <= context.budget_amount())
+            .filter(c -> c.products().stream().noneMatch(p -> preferences.excludes(p.name())))
+            .filter(
+                c ->
+                    composition.accepts(
+                        GiftComposition.wholeCake(
+                            c.products().get(0).name(), c.products().get(0).description()),
+                        GiftComposition.wholeCake(
+                            c.products().get(1).name(), c.products().get(1).description())))
             .toList();
     if (candidates.isEmpty()) {
       return List.of();
@@ -107,6 +119,10 @@ public final class HybridRecommendationService {
                               recipient.specified()
                                   ? -recipientScores.get(c.candidate().candidate_id())
                                   : 0)
+                      .thenComparingDouble(
+                          c ->
+                              -composition.budgetFit(
+                                  c.candidate().totalAmount(), context.budget_amount()))
                       .thenComparingDouble(c -> -adjusted(c, selected))
                       .thenComparing(c -> c.candidate().candidate_id()))
               .orElseThrow();
